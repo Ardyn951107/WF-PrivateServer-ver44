@@ -29,6 +29,10 @@ import gameToBuildVersion from "../../constants/gameToBuildVersion.ts";
 import { args } from "../../helpers/commandLineArguments.ts";
 import { buildLabelToVersionInt } from "../../helpers/versionHelper.ts";
 import gameToBuildVersionInt from "../../constants/gameToBuildVersionInt.ts";
+import { checkClientCompatibility } from "../../services/clientCompatibilityService.ts";
+import customBuild from "../../constants/customBuild.ts";
+
+let loggedDetectedU44Build = false;
 
 export const loginController: RequestHandler = async (request, response) => {
     const loginRequest = JSON.parse(String(request.body)) as ILoginRequest; // parse octet stream of json data to json object
@@ -62,9 +66,24 @@ export const loginController: RequestHandler = async (request, response) => {
 
     const buildLabel = getBuildLabelForUnauthenticatedRequest(request);
 
-    if (version_compare(buildLabel, "2026.08.19.11.06") > 0 && !args.dev) {
-        response.status(400).json({ error: "I'm making a list and checking it twice" });
+    const compatibility = checkClientCompatibility(buildLabel);
+    if (!compatibility.allowed && !args.dev) {
+        logger.warn(
+            `Rejected client build ${buildLabel}; ${customBuild.name} currently accepts builds through ${compatibility.maxBuildLabel ?? "unlimited"}`
+        );
+        response.status(400).json({
+            error: `unsupported client build; maximum supported build is ${compatibility.maxBuildLabel ?? "unlimited"}`
+        });
         return;
+    }
+
+    if (
+        compatibility.family === "u44" &&
+        config.clientCompatibility?.logDetectedU44Build !== false &&
+        !loggedDetectedU44Build
+    ) {
+        loggedDetectedU44Build = true;
+        logger.info(`Detected U44-family client build: ${buildLabel} (target ${customBuild.targetGameVersion})`);
     }
 
     if (!account && config.autoCreateAccount) {

@@ -45,6 +45,9 @@ shipSchema.set("toObject", {
     virtuals: true
 });
 
+// Looked up on every inventory.php call (Ship.find({ ShipOwnerId })); without this it scans the whole collection.
+shipSchema.index({ ShipOwnerId: 1 });
+
 export const Ship = model("Ships", shipSchema);
 
 export type TShipDatabaseDocument = Document<unknown, {}, IShipDatabase> &

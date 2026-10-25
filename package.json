@@ -1,6 +1,6 @@
 {
   "name": "spaceninjaserver",
-  "version": "0.1.0",
+  "version": "0.1.0-u44.1.1-custom.3",
   "description": "SpaceNinjaServer",
   "main": "src/index.ts",
   "scripts": {
@@ -24,7 +24,9 @@
     "generate-supplementalDict": "cd scripts && node generate-supplementalDict.js",
     "knip": "knip",
     "knip:fix": "knip --fix",
-    "fix": "npm run update-translations && npm run knip:fix && npm run prettier"
+    "fix": "npm run update-translations && npm run knip:fix && npm run prettier",
+    "u44:diagnostic": "node scripts/u44-diagnostic.cjs",
+    "db:migrate": "node scripts/migrate-db.mjs"
   },
   "type": "module",
   "dependencies": {

@@ -34,5 +34,7 @@ const pendingTradeSchema = new Schema<IPendingTradeDatabase>({
 });
 
 pendingTradeSchema.index({ a: 1, b: 1 }, { unique: true });
+// inventory.php queries { $or: [{ a: id }, { b: id }] }; the index above only covers the "a" branch.
+pendingTradeSchema.index({ b: 1 });
 
 export const PendingTrade = model<IPendingTradeDatabase>("PendingTrade", pendingTradeSchema);

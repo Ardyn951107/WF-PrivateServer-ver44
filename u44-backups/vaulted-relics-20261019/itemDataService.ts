@@ -1,0 +1,5616 @@
+import type { IKeyChainRequest } from "../types/requestTypes.ts";
+import type {
+    IBoosterPack,
+    IBoosterPackComponent,
+    IBundle,
+    IDefaultUpgrade,
+    IInboxMessage,
+    IKey,
+    IMissionReward,
+    IPowersuit,
+    IRecipe,
+    IRegion,
+    ISyndicate,
+    IUpgrade,
+    IVendor,
+    TMissionDeck,
+    TRarity,
+    TReward
+} from "warframe-public-export-plus";
+import {
+    dict_de,
+    dict_en,
+    dict_es,
+    dict_fr,
+    dict_it,
+    dict_ja,
+    dict_ko,
+    dict_pl,
+    dict_pt,
+    dict_ru,
+    dict_tc,
+    dict_th,
+    dict_tr,
+    dict_uk,
+    dict_zh,
+    ExportArcanes,
+    ExportBoosterPacks,
+    ExportBoosters,
+    ExportBundles,
+    ExportCreditBundles,
+    ExportCustoms,
+    ExportDojoRecipes,
+    ExportDrones,
+    ExportFlavour,
+    ExportGear,
+    ExportKeys,
+    ExportRailjackWeapons,
+    ExportRecipes,
+    ExportRegions,
+    ExportRelics,
+    ExportResources,
+    ExportRewards,
+    ExportSentinels,
+    ExportSyndicates,
+    ExportUpgrades,
+    ExportVendors,
+    ExportWarframes,
+    ExportWeapons
+} from "warframe-public-export-plus";
+import dict_en_supp from "../../static/fixed_responses/supplementalDict/en.json" with { type: "json" };
+import dict_de_supp from "../../static/fixed_responses/supplementalDict/de.json" with { type: "json" };
+import dict_es_supp from "../../static/fixed_responses/supplementalDict/es.json" with { type: "json" };
+import dict_fr_supp from "../../static/fixed_responses/supplementalDict/fr.json" with { type: "json" };
+import dict_it_supp from "../../static/fixed_responses/supplementalDict/it.json" with { type: "json" };
+import dict_ja_supp from "../../static/fixed_responses/supplementalDict/ja.json" with { type: "json" };
+import dict_ko_supp from "../../static/fixed_responses/supplementalDict/ko.json" with { type: "json" };
+import dict_pl_supp from "../../static/fixed_responses/supplementalDict/pl.json" with { type: "json" };
+import dict_pt_supp from "../../static/fixed_responses/supplementalDict/pt.json" with { type: "json" };
+import dict_ru_supp from "../../static/fixed_responses/supplementalDict/ru.json" with { type: "json" };
+import dict_tc_supp from "../../static/fixed_responses/supplementalDict/tc.json" with { type: "json" };
+import dict_th_supp from "../../static/fixed_responses/supplementalDict/th.json" with { type: "json" };
+import dict_tr_supp from "../../static/fixed_responses/supplementalDict/tr.json" with { type: "json" };
+import dict_uk_supp from "../../static/fixed_responses/supplementalDict/uk.json" with { type: "json" };
+import dict_zh_supp from "../../static/fixed_responses/supplementalDict/zh.json" with { type: "json" };
+import type { IMessage } from "../types/inboxTypes.ts";
+import { logger } from "../utils/logger.ts";
+import { version_compare } from "../helpers/inventoryHelpers.ts";
+import vorsPrizePreU40Rewards from "../../static/fixed_responses/vorsPrizePreU40Rewards.json" with { type: "json" };
+import gameToBuildVersion from "../constants/gameToBuildVersion.ts";
+import gameToBuildVersionInt from "../constants/gameToBuildVersionInt.ts";
+import { getWorldState } from "./worldStateService.ts";
+import { promises as fs } from "fs";
+import path from "path";
+import { BL_LATEST } from "../constants/gameVersions.ts";
+import type { TInventorySlot } from "../types/inventoryTypes/inventoryTypes.ts";
+import { shouldDoServerQol } from "./configService.ts";
+import { buildLabelToVersionInt, wikiDateToBuildVersionInt } from "../helpers/versionHelper.ts";
+import baro from "../constants/baro.ts";
+import type { Mutable } from "../utils/ts-utils.ts";
+
+export type WeaponTypeInternal =
+    | "LongGuns"
+    | "Pistols"
+    | "Melee"
+    | "SpaceMelee"
+    | "SpaceGuns"
+    | "SentinelWeapons"
+    | "OperatorAmps"
+    | "SpecialItems";
+
+export const supplementalRecipes: Record<string, IRecipe> = {
+    // Removed in 39.0.0
+    "/Lotus/Types/Recipes/EidolonRecipes/OpenArchwingSummonBlueprint": {
+        resultType: "/Lotus/Types/Restoratives/OpenArchwingSummon",
+        buildPrice: 7500,
+        buildTime: 1800,
+        skipBuildTimePrice: 10,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        alwaysAvailable: true,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/IraditeItem",
+                ItemCount: 50
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/GrokdrulItem",
+                ItemCount: 50
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/EidolonFishOilItem",
+                ItemCount: 30
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Circuits",
+                ItemCount: 600
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false
+    },
+    // The Law of Retribution raid bp. Removed in 22.14.0
+    "/Lotus/Types/Keys/GrineerRaidKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/RaidKeys/Raid01Stage01KeyItem",
+        buildPrice: 5000,
+        buildTime: 21600,
+        skipBuildTimePrice: 15,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Rubedo",
+                ItemCount: 500
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                ItemCount: 9000
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Gallium",
+                ItemCount: 1
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 100000
+    },
+    // The Law of Retribution (Nightmare) raid bp. Removed in 22.14.0
+    "/Lotus/Types/Keys/NightmareGrineerRaidKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/RaidKeys/Raid01Stage01NightmareKeyItem",
+        buildPrice: 5000,
+        buildTime: 21600,
+        skipBuildTimePrice: 15,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Rubedo",
+                ItemCount: 1000
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                ItemCount: 18000
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Gallium",
+                ItemCount: 2
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 100000
+    },
+    // The Jordas Verdict raid bp. Removed in 22.14.0
+    "/Lotus/Types/Keys/GolemRaidKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/RaidKeys/RaidGolemStage01KeyItem",
+        buildPrice: 5000,
+        buildTime: 21600,
+        skipBuildTimePrice: 15,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Plastids",
+                ItemCount: 2000
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                ItemCount: 12000
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Neurode",
+                ItemCount: 2
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 100000
+    },
+    // Orokin Derelict Assassination bp for Lephantis. Removed in 28.3.0
+    "/Lotus/Types/Keys/GolemKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/DerelictGolemKey",
+        buildPrice: 7500,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/BossNavCode",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                ItemCount: 4000
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Salvage",
+                ItemCount: 1000
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Circuits",
+                ItemCount: 100
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 2500
+    },
+    // Orokin Derelict Capture bp. Removed in 28.3.0
+    "/Lotus/Types/Keys/DerelictCaptureKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/DerelictCaptureKey",
+        buildPrice: 6500,
+        buildTime: 60,
+        skipBuildTimePrice: 5,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/NavCode",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                ItemCount: 2500
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Ferrite",
+                ItemCount: 750
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Circuits",
+                ItemCount: 80
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 1500
+    },
+    // Orokin Derelict Defense bp. Removed in 28.3.0
+    "/Lotus/Types/Keys/DerelictDefenseKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/DerelictDefenseKey",
+        buildPrice: 6500,
+        buildTime: 60,
+        skipBuildTimePrice: 5,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/NavCode",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                ItemCount: 2500
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Salvage",
+                ItemCount: 750
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/PolymerBundle",
+                ItemCount: 80
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 1500
+    },
+    // Orokin Derelict Exterminate bp. Removed in 28.3.0
+    "/Lotus/Types/Keys/DerelictExterminateKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/DerelictExterminateKey",
+        buildPrice: 6500,
+        buildTime: 60,
+        skipBuildTimePrice: 5,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/NavCode",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                ItemCount: 2500
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Salvage",
+                ItemCount: 750
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Circuits",
+                ItemCount: 80
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 1500
+    },
+    // Orokin Derelict Mobile Defense bp. Removed in 28.3.0
+    "/Lotus/Types/Keys/DerelictMobileDefenseKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/DerelictMobileDefenseKey",
+        buildPrice: 6500,
+        buildTime: 60,
+        skipBuildTimePrice: 5,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/NavCode",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                ItemCount: 2500
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Ferrite",
+                ItemCount: 750
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/PolymerBundle",
+                ItemCount: 80
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 1500
+    },
+    // Orokin Derelict Sabotage bp. Removed in 28.3.0
+    "/Lotus/Types/Keys/DerelictSabotageKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/DerelictSabotageKey",
+        buildPrice: 6500,
+        buildTime: 60,
+        skipBuildTimePrice: 5,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/NavCode",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                ItemCount: 2500
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Ferrite",
+                ItemCount: 750
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/PolymerBundle",
+                ItemCount: 80
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 1500
+    },
+    // Orokin Derelict Survival bp. Removed in 28.3.0
+    "/Lotus/Types/Keys/DerelictSurvivalKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/DerelictSurvivalKey",
+        buildPrice: 6500,
+        buildTime: 60,
+        skipBuildTimePrice: 5,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/NavCode",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                ItemCount: 2500
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Salvage",
+                ItemCount: 750
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Circuits",
+                ItemCount: 80
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 1500
+    },
+    // Vay Hek Frequency Triangulator (Assassination key) bp. Removed in 15.13.0
+    "/Lotus/Types/Keys/VeyHekKeyBlueprint": {
+        resultType: "/Lotus/Types/Keys/VeyHekKey",
+        buildPrice: 20000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/VayHekCoordinateFragmentA",
+                ItemCount: 2
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/VayHekCoordinateFragmentB",
+                ItemCount: 4
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/VayHekCoordinateFragmentC",
+                ItemCount: 8
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/VayHekCoordinateFragmentD",
+                ItemCount: 12
+            }
+        ],
+        excludeFromMarket: true,
+        tradable: false,
+        creditsCost: 10000
+    },
+    "/Lotus/Types/Recipes/KevinTestRecipe": {
+        resultType: "/Lotus/Upgrades/Modules/Crafted/IncendiaryRifleMod",
+        buildPrice: 1000,
+        buildTime: 180,
+        skipBuildTimePrice: 10,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Actuator",
+                ItemCount: 1
+            },
+            {
+                ItemType: "/Lotus/Weapons/Tenno/Pistol/LotusPistol",
+                ItemCount: 1
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/IncendiaryRifleModBlueprint": {
+        resultType: "/Lotus/Upgrades/Modules/Crafted/IncendiaryRifleMod",
+        buildPrice: 6000,
+        buildTime: 43200,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Upgrades/Modules/GrineerRifleModule",
+                ItemCount: 1
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Ferrite",
+                ItemCount: 500
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Rubedo",
+                ItemCount: 50
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Game/SolarRails/BasicSolarRailBlueprint": {
+        resultType: "/Lotus/Types/Game/SolarRails/BasicSolarRail",
+        buildPrice: 500000,
+        buildTime: 86400,
+        skipBuildTimePrice: 0,
+        consumeOnUse: false,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Gallium",
+                ItemCount: 25
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Rubedo",
+                ItemCount: 15000
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Plastids",
+                ItemCount: 15000
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/ControlModule",
+                ItemCount: 25
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/ArmourOnOperatorModeBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/ArmourOnOperatorMode",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/EidolonFishScalesItem",
+                ItemCount: 40
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 3
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/BothRareFishAPartItem",
+                ItemCount: 2
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/AttackSpeedOnKillBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/AttackSpeedOnKill",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/EidolonFishScalesItem",
+                ItemCount: 40
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemACutAItem",
+                ItemCount: 3
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/BothRareFishAPartItem",
+                ItemCount: 2
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/CriticalChanceOnHeadshotBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/CriticalChanceOnHeadshot",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/SentientShards/SentientShardCommonItem",
+                ItemCount: 40
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemACutAItem",
+                ItemCount: 3
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/NightLegendaryFishAPartItem",
+                ItemCount: 1
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/HealOnTransferenceInBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HealOnTransferenceIn",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/SentientShards/SentientShardCommonItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemACutAItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/NightLegendaryFishAPartItem",
+                ItemCount: 1
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/HealOnTransferenceOutBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HealOnTransferenceOut",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/SentientShards/SentientShardCommonItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/NightLegendaryFishAPartItem",
+                ItemCount: 1
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/HealOnVoidDashBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HealOnVoidDash",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/SentientShards/SentientShardCommonItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemACutAItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/NightLegendaryFishAPartItem",
+                ItemCount: 1
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/HealthOnOperatorModeBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HealthOnOperatorMode",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/EidolonFishScalesItem",
+                ItemCount: 40
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemACutAItem",
+                ItemCount: 3
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/BothRareFishAPartItem",
+                ItemCount: 2
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/ImmunityFallDamageOnVoidDashBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/ImmunityFallDamageOnVoidDash",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/SentientShards/SentientShardCommonItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemACutAItem",
+                ItemCount: 3
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/NightRareFishBPartItem",
+                ItemCount: 2
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/IncreasedCriticalDamageOnCriticalStrikeBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/IncreasedCriticalDamageOnCriticalStrike",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/SentientShards/SentientShardCommonItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 3
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/NightRareFishAPartItem",
+                ItemCount: 2
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/IncreasedDamageOnStatusProcBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/IncreasedDamageOnStatusProc",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/SentientShards/SentientShardCommonItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemACutAItem",
+                ItemCount: 3
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/NightRareFishBPartItem",
+                ItemCount: 2
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/OperatorAmmoRegenOnKillBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/OperatorAmmoRegenOnKill",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/EidolonFishScalesItem",
+                ItemCount: 40
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemACutAItem",
+                ItemCount: 3
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/BothRareFishAPartItem",
+                ItemCount: 2
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/SpeedOnVoidDashBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/SpeedOnVoidDash",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/SentientShards/SentientShardCommonItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/NightRareFishAPartItem",
+                ItemCount: 2
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Quills/StatusChanceOnHeadshotBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/StatusChanceOnHeadshot",
+        buildPrice: 15000,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/SentientShards/SentientShardCommonItem",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 3
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/NightLegendaryFishAPartItem",
+                ItemCount: 1
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 10
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Weaponsmith/ChannelKillEnergyRateBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ChannelKillEnergyRate",
+        buildPrice: 7500,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 20
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/CetusWispItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/ForestRodentPartItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 3
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Weaponsmith/CritChannelingDamageBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CritChannelingDamage",
+        buildPrice: 7500,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 20
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/CetusWispItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/BirdOfPreyPartItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 3
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Weaponsmith/FinisherLifestealBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/Offensive/FinisherLifesteal",
+        buildPrice: 7500,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 20
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/CetusWispItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/DayUncommonFishAPartItem",
+                ItemCount: 40
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 3
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Weaponsmith/GroundSlamPullBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GroundSlamPull",
+        buildPrice: 7500,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 20
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/CetusWispItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/BothUncommonFishAPartItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 3
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Weaponsmith/MeleeArcaneProjectileOnJumpBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeArcaneProjectileOnJump",
+        buildPrice: 7500,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Neurode",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/CetusWispItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Plastids",
+                ItemCount: 800
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemACutAItem",
+                ItemCount: 3
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Weaponsmith/MeleeArcaneShockwaveOnJumpBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeArcaneShockwaveOnJump",
+        buildPrice: 7500,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Neurode",
+                ItemCount: 5
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/CetusWispItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Plastids",
+                ItemCount: 800
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 3
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Weaponsmith/StatusChannelingDamageBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/Offensive/StatusChannelingDamage",
+        buildPrice: 7500,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 20
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/CetusWispItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/DayUncommonFishBPartItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 3
+            }
+        ],
+        tradable: false
+    },
+    "/Lotus/Types/Recipes/EidolonRecipes/Arcanes/Weaponsmith/StatusTriggerRadialDamageBlueprint": {
+        resultType: "/Lotus/Upgrades/CosmeticEnhancers/Offensive/StatusTriggerRadialDamage",
+        buildPrice: 7500,
+        buildTime: 3600,
+        skipBuildTimePrice: 10,
+        consumeOnUse: true,
+        num: 1,
+        codexSecret: false,
+        ingredients: [
+            {
+                ItemType: "/Lotus/Types/Items/MiscItems/Eidolonium",
+                ItemCount: 20
+            },
+            {
+                ItemType: "/Lotus/Types/Gameplay/Eidolon/Resources/CetusWispItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Fish/Eidolon/FishParts/BothUncommonFishBPartItem",
+                ItemCount: 10
+            },
+            {
+                ItemType: "/Lotus/Types/Items/Gems/Eidolon/EidolonGemBCutAItem",
+                ItemCount: 3
+            }
+        ],
+        tradable: false
+    }
+};
+
+export const supplementalSuits: Record<string, IPowersuit> = {
+    "/Lotus/Powersuits/Excalibur/DarkExcalibur": {
+        name: "/Lotus/Language/Changyou/DarkExcaliburName",
+        parentName: "/Lotus/Powersuits/Excalibur/ExcaliburBaseSuit",
+        description: "/Lotus/Language/Suits/DarkExcaliburDesc",
+        icon: "/Lotus/Interface/Icons/Store/DarkExcalibur.png",
+        health: 270,
+        shield: 270,
+        armor: 315,
+        stamina: 3,
+        power: 175,
+        codexSecret: true,
+        masteryReq: 0,
+        longDescription: "/Lotus/Language/Codex/DarkExcaliburLongDesc",
+        sprintSpeed: 1,
+        passiveDescription: "/Lotus/Language/Suits/ExcaliburPassiveAbility",
+        exalted: ["/Lotus/Powersuits/Excalibur/DoomSwordCYUmbra"],
+        abilities: [
+            {
+                uniqueName: "/Lotus/Powersuits/Excalibur/Abilities/SlashDashNewAbility",
+                name: "/Lotus/Language/Suits/SlashDashAbilityName",
+                description: "/Lotus/Language/Suits/SlashDashAbilityDesc",
+                icon: "/Lotus/Interface/Icons/Abilities/Power04.png",
+                energyRequiredToActivate: 25
+            },
+            {
+                uniqueName: "/Lotus/Powersuits/Excalibur/Abilities/RadialBlindAbility",
+                name: "/Lotus/Language/Suits/RadialBlindAbilityName",
+                description: "/Lotus/Language/Suits/RadialBlindAbilityDesc",
+                icon: "/Lotus/Interface/Icons/Abilities/Power01.png",
+                energyRequiredToActivate: 50
+            },
+            {
+                uniqueName: "/Lotus/Powersuits/Excalibur/Abilities/RadialJavelinAbility",
+                name: "/Lotus/Language/Suits/RadialJavelinAbilityName",
+                description: "/Lotus/Language/Suits/RadialJavelinAbilityDesc",
+                icon: "/Lotus/Interface/Icons/Abilities/Power03.png",
+                energyRequiredToActivate: 75
+            },
+            {
+                uniqueName: "/Lotus/Powersuits/Excalibur/Abilities/SwordOfDoomAbility",
+                name: "/Lotus/Language/Suits/SwordOfDoomAbilityName",
+                description: "/Lotus/Language/Suits/SwordOfDoomAbilityDesc",
+                icon: "/Lotus/Interface/Icons/Abilities/ExcaliburSwordOfDoom.png",
+                energyRequiredToActivate: 25,
+                energyConsumptionOverTime: 2.5
+            }
+        ],
+        productCategory: "Suits",
+        variantType: "VT_VARIANT",
+        additionalItems: [
+            "/Lotus/Upgrades/Skins/Excalibur/ExcaliburUmbraHelmet",
+            "/Lotus/Powersuits/Excalibur/DoomSwordCYUmbra"
+        ],
+        excludeFromMarket: true,
+        introducedAt: 1519338301
+    },
+    "/Lotus/Powersuits/Stalker/Stalker": {
+        name: "/Lotus/Language/Game/Stalker",
+        parentName: "/Lotus/Types/Game/PowerSuits/PlayerPowerSuit",
+        description: "/Lotus/Language/Enemies/StalkerDesc",
+        icon: "/Lotus/Interface/Icons/StoreIcons/MiscItems/Stalker.png",
+        health: 455,
+        shield: 180,
+        armor: 135,
+        stamina: 3,
+        power: 100,
+        codexSecret: true,
+        masteryReq: 0,
+        longDescription: "/Lotus/Language/Enemies/StalkerDesc",
+        sprintSpeed: 1.2,
+        passiveDescription: "/Lotus/Language/Suits/StalkerPassiveAbility",
+        abilities: [
+            {
+                uniqueName: "/Lotus/Powersuits/Stalker/Abilities/StalkerTeleportToAbility",
+                name: "/Lotus/Language/Suits/StalkerTeleportName",
+                description: "/Lotus/Language/Suits/StalkerTeleportDesc",
+                icon: "/Lotus/Interface/Icons/Abilities/StalkerTeleport.png",
+                energyRequiredToActivate: 25
+            },
+            {
+                uniqueName: "/Lotus/Powersuits/Stalker/Abilities/StalkerStunAbility",
+                name: "/Lotus/Language/Suits/StalkerStunName",
+                description: "/Lotus/Language/Suits/StalkerStunDescription",
+                icon: "/Lotus/Interface/Icons/Abilities/StalkerMarkedVengeance.png",
+                energyRequiredToActivate: 50
+            },
+            {
+                uniqueName: "/Lotus/Powersuits/Stalker/Abilities/StalkerSmokeScreenAbility",
+                name: "/Lotus/Language/Suits/StalkerSmokeScreenName",
+                description: "/Lotus/Language/Suits/StalkerSmokeScreenDesc",
+                icon: "/Lotus/Interface/Icons/Abilities/StalkerSmokeScreen.png",
+                energyRequiredToActivate: 75
+            },
+            {
+                uniqueName: "/Lotus/Powersuits/Stalker/Abilities/StalkerAbsorbAbility",
+                name: "/Lotus/Language/Suits/StalkerAbsorbAbilityName",
+                description: "/Lotus/Language/Suits/StalkerAbsorbAbilityDesc",
+                icon: "/Lotus/Interface/Icons/Abilities/StalkerAbsorbProjectile.png",
+                energyRequiredToActivate: 100
+            }
+        ],
+        productCategory: "Suits",
+        variantType: "VT_NORMAL",
+        excludeFromMarket: true,
+        introducedAt: 1687359253
+    }
+};
+
+export const supplementalUpgrades: Record<string, IUpgrade> = {
+    // removed in 2017.03.06.29.02.13
+    "/Lotus/Upgrades/Mods/Aura/PlayerElectricityImmunityAuraMod": {
+        name: "/Lotus/Language/Items/PlayerElectricityImmunityBuffName",
+        icon: "/Lotus/Interface/Cards/Images/MissionBuffs/PlayerElectricityImmunityBuff.png",
+        polarity: "AP_ANY", // it should be none
+        rarity: "UNCOMMON",
+        codexSecret: true,
+        baseDrain: -2,
+        fusionLimit: 5,
+        compat: "/Lotus/Types/Game/PowerSuits/PlayerPowerSuit",
+        compatName: "AURA",
+        type: "AURA",
+        description: "/Lotus/Language/Items/PlayerElectricityImmunityBuffDesc",
+        isFrivolous: true,
+        tradable: false
+    },
+    // removed in 2017.03.06.29.02.13
+    "/Lotus/Upgrades/Mods/Aura/PlayerFireImmunityAuraMod": {
+        name: "/Lotus/Language/Items/PlayerFireImmunityBuffName",
+        icon: "/Lotus/Interface/Cards/Images/MissionBuffs/PlayerFireImmunityBuff.png",
+        polarity: "AP_ANY", // it should be none
+        rarity: "UNCOMMON",
+        codexSecret: true,
+        baseDrain: -2,
+        fusionLimit: 5,
+        compat: "/Lotus/Types/Game/PowerSuits/PlayerPowerSuit",
+        compatName: "AURA",
+        type: "AURA",
+        description: "/Lotus/Language/Items/PlayerFireImmunityBuffDesc",
+        isFrivolous: true,
+        tradable: false
+    },
+    // removed in 2017.03.06.29.02.13
+    "/Lotus/Upgrades/Mods/Aura/PlayerFreezeImmunityAuraMod": {
+        name: "/Lotus/Language/Items/PlayerFreezeImmunityBuffName",
+        icon: "/Lotus/Interface/Cards/Images/MissionBuffs/PlayerFreezeImmunityBuff.png",
+        polarity: "AP_ANY", // it should be none
+        rarity: "UNCOMMON",
+        codexSecret: true,
+        baseDrain: -2,
+        fusionLimit: 5,
+        compat: "/Lotus/Types/Game/PowerSuits/PlayerPowerSuit",
+        compatName: "AURA",
+        type: "AURA",
+        description: "/Lotus/Language/Items/PlayerFreezeImmunityBuffDesc",
+        isFrivolous: true,
+        tradable: false
+    },
+    // removed in 2017.03.06.29.02.13
+    "/Lotus/Upgrades/Mods/Aura/PlayerLaserImmunityAuraMod": {
+        name: "/Lotus/Language/Items/PlayerLaserImmunityBuffName",
+        icon: "/Lotus/Interface/Cards/Images/MissionBuffs/PlayerLaserImmunityBuff.png",
+        polarity: "AP_ANY", // it should be none
+        rarity: "UNCOMMON",
+        codexSecret: true,
+        baseDrain: -2,
+        fusionLimit: 5,
+        compat: "/Lotus/Types/Game/PowerSuits/PlayerPowerSuit",
+        compatName: "AURA",
+        type: "AURA",
+        description: "/Lotus/Language/Items/PlayerLaserImmunityBuffDesc",
+        isFrivolous: true,
+        tradable: false
+    },
+    // removed in 2015.12.05.18.07
+    "/Lotus/Upgrades/Mods/Aura/PlayerXPAuraMod": {
+        name: "/Lotus/Language/Items/PlayerXPBuffName",
+        icon: "/Lotus/Interface/Cards/Images/MissionBuffs/PlayerXPBuff.png",
+        polarity: "AP_TACTIC",
+        rarity: "UNCOMMON",
+        codexSecret: true,
+        baseDrain: -2,
+        fusionLimit: 5,
+        compat: "/Lotus/Types/Game/PowerSuits/PlayerPowerSuit",
+        compatName: "AURA",
+        type: "AURA",
+        description: "/Lotus/Language/Items/PlayerXPBuffDesc",
+        isFrivolous: true,
+        tradable: false
+    }
+};
+
+export const supplementalKeys: Record<string, IKey> = {
+    "/Lotus/Types/Keys/RaidKeys/Raid01Stage01KeyItem": {
+        name: "/Lotus/Language/Items/GrineerTrialsName",
+        description: "/Lotus/Language/Items/GrineerTrialsDesc",
+        icon: "/Lotus/Interface/Quests/GrineerRaidKeyChain.png",
+        parentName: "/Lotus/Types/Keys/RaidKeys/BaseRaidKey",
+        codexSecret: true,
+        mission: {
+            minEnemyLevel: 70,
+            maxEnemyLevel: 80
+        }
+    },
+    "/Lotus/Types/Keys/RaidKeys/Raid01Stage01NightmareKeyItem": {
+        name: "/Lotus/Language/Items/GrineerTrialsName",
+        description: "/Lotus/Language/Items/GrineerTrialsDesc",
+        icon: "/Lotus/Interface/Quests/GrineerRaidKeyChain.png",
+        parentName: "/Lotus/Types/Keys/RaidKeys/BaseRaidKey",
+        codexSecret: true,
+        mission: {
+            minEnemyLevel: 70,
+            maxEnemyLevel: 80
+        }
+    },
+    "/Lotus/Types/Keys/RaidKeys/Raid01Stage02KeyItem": {
+        name: "/Lotus/Language/Items/GrineerTrialsName",
+        description: "/Lotus/Language/Items/GrineerTrialsDesc",
+        icon: "/Lotus/Interface/Quests/GrineerRaidKeyChain.png",
+        parentName: "/Lotus/Types/Keys/RaidKeys/BaseRaidKey",
+        codexSecret: true,
+        mission: {
+            minEnemyLevel: 80,
+            maxEnemyLevel: 90
+        }
+    },
+    "/Lotus/Types/Keys/RaidKeys/Raid01Stage02NightmareKeyItem": {
+        name: "/Lotus/Language/Items/GrineerTrialsName",
+        description: "/Lotus/Language/Items/GrineerTrialsDesc",
+        icon: "/Lotus/Interface/Quests/GrineerRaidKeyChain.png",
+        parentName: "/Lotus/Types/Keys/RaidKeys/BaseRaidKey",
+        codexSecret: true,
+        mission: {
+            minEnemyLevel: 80,
+            maxEnemyLevel: 90
+        }
+    },
+    "/Lotus/Types/Keys/RaidKeys/Raid01Stage03KeyItem": {
+        name: "/Lotus/Language/Items/GrineerTrialsName",
+        description: "/Lotus/Language/Items/GrineerTrialsDesc",
+        icon: "/Lotus/Interface/Quests/GrineerRaidKeyChain.png",
+        parentName: "/Lotus/Types/Keys/RaidKeys/BaseRaidKey",
+        codexSecret: true,
+        missionReward: {
+            credits: 200000,
+            droptable: "/Lotus/Types/Game/MissionDecks/RaidRewards/HekRaid"
+        },
+        mission: {
+            minEnemyLevel: 80,
+            maxEnemyLevel: 100
+        }
+    },
+    "/Lotus/Types/Keys/RaidKeys/Raid01Stage03NightmareKeyItem": {
+        name: "/Lotus/Language/Items/GrineerNightmareTrialsName",
+        description: "/Lotus/Language/Items/GrineerTrialsDesc",
+        icon: "/Lotus/Interface/Quests/GrineerRaidKeyChain.png",
+        parentName: "/Lotus/Types/Keys/RaidKeys/BaseRaidKey",
+        codexSecret: true,
+        missionReward: {
+            credits: 250000,
+            droptable: "/Lotus/Types/Game/MissionDecks/RaidRewards/NightmareHekRaid"
+        },
+        mission: {
+            minEnemyLevel: 80,
+            maxEnemyLevel: 100
+        }
+    },
+    "/Lotus/Types/Keys/RaidKeys/RaidGolemStage01KeyItem": {
+        name: "/Lotus/Language/Items/GolemTrialsName",
+        description: "/Lotus/Language/Items/GolemTrialsDesc",
+        icon: "/Lotus/Interface/Icons/Store/GolemRaidKey.png",
+        parentName: "/Lotus/Types/Keys/RaidKeys/BaseRaidKey",
+        codexSecret: true,
+        mission: {
+            minEnemyLevel: 86,
+            maxEnemyLevel: 88
+        }
+    },
+    "/Lotus/Types/Keys/RaidKeys/RaidGolemStage02KeyItem": {
+        name: "/Lotus/Language/Items/GolemTrialsName",
+        description: "/Lotus/Language/Items/GolemTrialsDesc",
+        icon: "/Lotus/Interface/Icons/Store/GolemRaidKey.png",
+        parentName: "/Lotus/Types/Keys/RaidKeys/BaseRaidKey",
+        codexSecret: true,
+        mission: {
+            minEnemyLevel: 88,
+            maxEnemyLevel: 92
+        }
+    },
+    "/Lotus/Types/Keys/RaidKeys/RaidGolemStage03KeyItem": {
+        name: "/Lotus/Language/Items/GolemTrialsName",
+        description: "/Lotus/Language/Items/GolemTrialsDesc",
+        icon: "/Lotus/Interface/Icons/Store/GolemRaidKey.png",
+        parentName: "/Lotus/Types/Keys/RaidKeys/BaseRaidKey",
+        codexSecret: true,
+        missionReward: {
+            credits: 300000,
+            items: ["/Lotus/StoreItems/Upgrades/Mods/FusionBundles/RareFusionBundle"],
+            droptable: "/Lotus/Types/Game/MissionDecks/RaidRewards/GolemRaid"
+        },
+        mission: {
+            minEnemyLevel: 92,
+            maxEnemyLevel: 97
+        }
+    },
+    "/Lotus/Types/Keys/DerelictGolemKey": {
+        name: "/Lotus/Language/Items/OrokinDerelictBossKey",
+        description: "/Lotus/Language/Items/OrokinDerelictBossKeyDesc",
+        icon: "/Lotus/Interface/Icons/Store/OrokinDerelictKey.png",
+        parentName: "/Lotus/Types/Game/KeyItems/DerelictKeyItem",
+        codexSecret: false,
+        missionReward: {
+            credits: 7500,
+            droptable: "/Lotus/Types/Game/MissionDecks/GolemMissionRewards"
+        },
+        mission: {
+            minEnemyLevel: 25,
+            maxEnemyLevel: 35
+        }
+    },
+    "/Lotus/Types/Keys/DerelictSabotageKey": {
+        name: "/Lotus/Language/Items/OrokinDerelictSabotageKey",
+        description: "/Lotus/Language/Items/OrokinDerelictSabotageKeyDesc",
+        icon: "/Lotus/Interface/Icons/Store/OrokinDerelictKey.png",
+        parentName: "/Lotus/Types/Game/KeyItems/DerelictKeyItem",
+        codexSecret: false,
+        cacheRewardManifest: "/Lotus/Types/Game/MissionDecks/OrokinDerelictSabotageRewards",
+        mission: {
+            minEnemyLevel: 25,
+            maxEnemyLevel: 35
+        }
+    },
+    "/Lotus/Types/Keys/DerelictCaptureKey": {
+        name: "/Lotus/Language/Items/OrokinDerelictCaptureKey",
+        description: "/Lotus/Language/Items/OrokinDerelictCaptureKeyDesc",
+        icon: "/Lotus/Interface/Icons/Store/OrokinDerelictKey.png",
+        parentName: "/Lotus/Types/Game/KeyItems/DerelictKeyItem",
+        codexSecret: false,
+        mission: {
+            minEnemyLevel: 25,
+            maxEnemyLevel: 35
+        }
+    },
+    "/Lotus/Types/Keys/DerelictDefenseKey": {
+        name: "/Lotus/Language/Items/OrokinDerelictDefenseKey",
+        description: "/Lotus/Language/Items/OrokinDerelictDefenseKeyDesc",
+        icon: "/Lotus/Interface/Icons/Store/OrokinDerelictKey.png",
+        parentName: "/Lotus/Types/Game/KeyItems/DerelictKeyItem",
+        codexSecret: false,
+        missionReward: {
+            droptable: "/Lotus/Types/Game/MissionDecks/DerelictDefenseRewards"
+        },
+        mission: {
+            minEnemyLevel: 25,
+            maxEnemyLevel: 30
+        }
+    },
+    "/Lotus/Types/Keys/DerelictEmissaryBossKey": {
+        name: "/Lotus/Language/Items/OrokinDerelictEmissaryBossKey",
+        description: "/Lotus/Language/Items/OrokinDerelictBossKeyDesc",
+        icon: "/Lotus/Interface/Icons/Store/OrokinDerelictKey.png",
+        parentName: "/Lotus/Types/Game/KeyItems/DerelictKeyItem",
+        codexSecret: false,
+        missionReward: {
+            credits: 7500
+        },
+        mission: {
+            minEnemyLevel: 30,
+            maxEnemyLevel: 35
+        }
+    },
+    "/Lotus/Types/Keys/DerelictExterminateKey": {
+        name: "/Lotus/Language/Items/OrokinDerelictExterminateKey",
+        description: "/Lotus/Language/Items/OrokinDerelictExterminateKeyDesc",
+        icon: "/Lotus/Interface/Icons/Store/OrokinDerelictKey.png",
+        parentName: "/Lotus/Types/Game/KeyItems/DerelictKeyItem",
+        codexSecret: false,
+        mission: {
+            minEnemyLevel: 25,
+            maxEnemyLevel: 35
+        }
+    },
+    "/Lotus/Types/Keys/DerelictMobileDefenseKey": {
+        name: "/Lotus/Language/Items/OrokinDerelictMobDefKey",
+        description: "/Lotus/Language/Items/OrokinDerelictMobDefKeyDesc",
+        icon: "/Lotus/Interface/Icons/Store/OrokinDerelictKey.png",
+        parentName: "/Lotus/Types/Game/KeyItems/DerelictKeyItem",
+        codexSecret: false,
+        mission: {
+            minEnemyLevel: 25,
+            maxEnemyLevel: 35
+        }
+    },
+    "/Lotus/Types/Keys/DerelictSurvivalKey": {
+        name: "/Lotus/Language/Items/OrokinDerelictSurvivalKey",
+        description: "/Lotus/Language/Items/OrokinDerelictSurvivalKeyDesc",
+        icon: "/Lotus/Interface/Icons/Store/OrokinDerelictKey.png",
+        parentName: "/Lotus/Types/Game/KeyItems/DerelictKeyItem",
+        codexSecret: false,
+        mission: {
+            minEnemyLevel: 25,
+            maxEnemyLevel: 35
+        }
+    }
+};
+
+export const supplementalVendors: Record<string, IVendor> = {
+    "/Lotus/Types/Game/VendorManifests/Hubs/RailjackResourcesVendorManifest": {
+        isDynamic: false,
+        items: [
+            {
+                storeItem: "/Lotus/StoreItems/Weapons/CrewShip/MultitoolAmmoItem",
+                quantity: 1,
+                alwaysOffered: true,
+                bin: 0,
+                duplicates: 0,
+                itemPrices: [
+                    {
+                        ItemType: "/Lotus/Types/Items/RailjackMiscItems/PustrelsRailjackItem",
+                        ItemCount: 5
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/RailjackMiscItems/CubicsRailjackItem",
+                        ItemCount: 5
+                    }
+                ]
+            },
+            {
+                storeItem: "/Lotus/StoreItems/Weapons/CrewShip/EnergyAmmoItem",
+                quantity: 1,
+                alwaysOffered: true,
+                bin: 0,
+                duplicates: 0,
+                itemPrices: [
+                    {
+                        ItemType: "/Lotus/Types/Items/RailjackMiscItems/CopernicsRailjackItem",
+                        ItemCount: 15
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/RailjackMiscItems/CubicsRailjackItem",
+                        ItemCount: 15
+                    }
+                ]
+            },
+            {
+                storeItem: "/Lotus/StoreItems/Weapons/CrewShip/Missiles/MissileAmmoItem",
+                quantity: 1,
+                alwaysOffered: true,
+                bin: 0,
+                duplicates: 0,
+                itemPrices: [
+                    {
+                        ItemType: "/Lotus/Types/Items/RailjackMiscItems/CarbidesRailjackItem",
+                        ItemCount: 10
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/RailjackMiscItems/CopernicsRailjackItem",
+                        ItemCount: 10
+                    }
+                ]
+            },
+            {
+                storeItem: "/Lotus/StoreItems/Weapons/CrewShip/Laser/MegaLaserAmmoItem",
+                quantity: 1,
+                alwaysOffered: true,
+                bin: 0,
+                duplicates: 0,
+                itemPrices: [
+                    {
+                        ItemType: "/Lotus/Types/Items/RailjackMiscItems/PustrelsRailjackItem",
+                        ItemCount: 25
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/RailjackMiscItems/CarbidesRailjackItem",
+                        ItemCount: 20
+                    }
+                ]
+            }
+        ]
+    }
+};
+
+export const supplementalItemNames: Record<string, string> = {
+    "/Lotus/Types/Game/SolarRails/BasicSolarRail": "/Lotus/Language/Items/BasicSolarRailName",
+    "/Lotus/Types/Game/LotusMeleeWeapon": "/Lotus/Language/Items/MeleeCategoryName",
+    "/Lotus/Weapons/Tenno/Melee/PlayerMeleeWeapon": "/Lotus/Language/Items/MeleeCategoryName",
+    "/Lotus/Weapons/Tenno/Pistol/LotusPistol": "/Lotus/Language/Items/PistolCategoryName",
+    "/Lotus/Weapons/Tenno/Rifle/LotusRifle": "/Lotus/Language/Items/RifleCategoryName",
+    "/Lotus/Weapons/Tenno/Shotgun/LotusShotgun": "/Lotus/Language/Items/ShotgunCategoryName",
+    "/Lotus/Types/Game/PowerSuit": "/Lotus/Language/Items/Warframe",
+    "/Lotus/Upgrades/Modules/Crafted/IncendiaryRifleMod": "/Lotus/Language/Items/InfernoMod",
+    "/Lotus/Weapons/Tenno/Archwing/Primary/ArchGun": "/Lotus/Language/Items/ArchwingGun",
+    "/Lotus/Weapons/SolarisUnited/Primary/LotusModularPrimaryBeam": "/Lotus/Language/Weapons/LotusModularGunName",
+    "/Lotus/Weapons/SolarisUnited/Primary/LotusModularPrimaryLauncher": "/Lotus/Language/Weapons/LotusModularGunName",
+    "/Lotus/Weapons/SolarisUnited/Primary/LotusModularPrimaryShotgun": "/Lotus/Language/Weapons/LotusModularGunName",
+    "/Lotus/Weapons/SolarisUnited/Primary/LotusModularPrimarySniper": "/Lotus/Language/Weapons/LotusModularGunName",
+    "/Lotus/Weapons/SolarisUnited/Secondary/LotusModularSecondaryBeam": "/Lotus/Language/Weapons/LotusModularGunName",
+    "/Lotus/Weapons/SolarisUnited/Secondary/LotusModularSecondaryShotgun":
+        "/Lotus/Language/Weapons/LotusModularGunName",
+    "/Lotus/Types/Vehicles/Hoverboard/HoverboardSuit": "/Lotus/Language/SolarisVenus/KDriveItem"
+};
+
+const preU42YinYangRewards: TMissionDeck = [
+    [
+        {
+            type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/AnimaBlueprint",
+            itemCount: 1,
+            probability: 0.1128
+        },
+        {
+            type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/AnimaChassisBlueprint",
+            itemCount: 1,
+            probability: 0.1291
+        },
+        {
+            type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/AnimaHelmetBlueprint",
+            itemCount: 1,
+            probability: 0.1291
+        },
+        {
+            type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/AnimaSystemsBlueprint",
+            itemCount: 1,
+            probability: 0.1291
+        },
+        {
+            type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/AnimusBlueprint",
+            itemCount: 1,
+            probability: 0.1128
+        },
+        {
+            type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/AnimusChassisBlueprint",
+            itemCount: 1,
+            probability: 0.1291
+        },
+        {
+            type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/AnimusHelmetBlueprint",
+            itemCount: 1,
+            probability: 0.1291
+        },
+        {
+            type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/AnimusSystemsBlueprint",
+            itemCount: 1,
+            probability: 0.1291
+        }
+    ]
+];
+
+// U26 added parazon and its mods, older versions dosen't like when there new things in rewards
+const preU26SpyMissionDecks: Record<string, TMissionDeck> = {
+    "/Lotus/Types/Game/MissionDecks/SpyMissionRewards/QueensSpyHighMissionRewards": [
+        [
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/2000Credits",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/2500Credits",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/UncommonFusionBundle",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/RareFusionBundle",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponRecoilReductionMod",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponRecoilReductionMod",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponGlaivePowerthrowMod",
+                itemCount: 1,
+                probability: 0.1429
+            }
+        ],
+        [
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionZephyrPrimeBBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionChromaPrimeBBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionWukongPrimeCBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionAtlasPrimeABronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionAtlasPrimeABronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionAtlasPrimeCBronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionAtlasPrimeBBronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionMesaPrimeBBronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionAtlasPrimeBBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionEquinoxPrimeBBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionAtlasPrimeCBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionWukongPrimeBBronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionWukongPrimeCBronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionEquinoxPrimeCBronze",
+                itemCount: 1,
+                probability: 0.0322
+            }
+        ],
+        [
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/4000Credits",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/5000Credits",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponGlaivePowerthrowMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarAbilityRangeMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/WeaponFireIterationsMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/DualStat/FireEventPistolMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/DualStat/FireEventRifleMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/DualStat/IceEventPistolMod",
+                itemCount: 1,
+                probability: 0.1128
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/DualStat/IceEventShotgunMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponBowConvertAmmoMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponSnipersConvertAmmoMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/WeaponShotgunConvertAmmoMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponMeleeStealthLethalMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/PriestHelmetBlueprint",
+                itemCount: 1,
+                probability: 0.1128
+            }
+        ]
+    ],
+    "/Lotus/Types/Game/MissionDecks/SpyMissionRewards/SpyHighMissionRewards": [
+        [
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/2000Credits",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/2500Credits",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/UncommonFusionBundle",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/RareFusionBundle",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponRecoilReductionMod",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponRecoilReductionMod",
+                itemCount: 1,
+                probability: 0.1429
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponGlaivePowerthrowMod",
+                itemCount: 1,
+                probability: 0.1429
+            }
+        ],
+        [
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionZephyrPrimeBBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionChromaPrimeBBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionWukongPrimeCBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionAtlasPrimeABronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionAtlasPrimeABronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionAtlasPrimeCBronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionAtlasPrimeBBronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionMesaPrimeBBronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionAtlasPrimeBBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionEquinoxPrimeBBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionAtlasPrimeCBronze",
+                itemCount: 1,
+                probability: 0.1106
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionWukongPrimeBBronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionWukongPrimeCBronze",
+                itemCount: 1,
+                probability: 0.0322
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T3VoidProjectionEquinoxPrimeCBronze",
+                itemCount: 1,
+                probability: 0.0322
+            }
+        ],
+        [
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/4000Credits",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/5000Credits",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponGlaivePowerthrowMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarAbilityRangeMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/WeaponFireIterationsMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/DualStat/FireEventPistolMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/DualStat/FireEventRifleMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/DualStat/IceEventPistolMod",
+                itemCount: 1,
+                probability: 0.0752
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/DualStat/IceEventShotgunMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponBowConvertAmmoMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponSnipersConvertAmmoMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/WeaponShotgunConvertAmmoMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponMeleeStealthLethalMod",
+                itemCount: 1,
+                probability: 0.0645
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/RangerHelmetBlueprint",
+                itemCount: 1,
+                probability: 0.0752
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/RangerBlueprint",
+                itemCount: 1,
+                probability: 0.0752
+            }
+        ]
+    ],
+    "/Lotus/Types/Game/MissionDecks/SpyMissionRewards/SpyLowMissionRewards": [
+        [
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/1500Credits",
+                itemCount: 1,
+                probability: 0.1667
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/UncommonFusionBundle",
+                itemCount: 1,
+                probability: 0.1667
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/RareFusionBundle",
+                itemCount: 1,
+                probability: 0.1667
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarParryReflectMod",
+                itemCount: 1,
+                probability: 0.1667
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarAutoParryMod",
+                itemCount: 1,
+                probability: 0.1667
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarParryMeleeMod",
+                itemCount: 1,
+                probability: 0.1667
+            }
+        ],
+        [
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T1VoidProjectionMesaPrimeABronze",
+                itemCount: 1,
+                probability: 0.1667
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T1VoidProjectionAtlasPrimeABronze",
+                itemCount: 1,
+                probability: 0.1667
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T1VoidProjectionAtlasPrimeBBronze",
+                itemCount: 1,
+                probability: 0.1667
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T1VoidProjectionEquinoxPrimeABronze",
+                itemCount: 1,
+                probability: 0.1667
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T1VoidProjectionAtlasPrimeDBronze",
+                itemCount: 1,
+                probability: 0.1667
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T1VoidProjectionAtlasPrimeCBronze",
+                itemCount: 1,
+                probability: 0.1667
+            }
+        ],
+        [
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/2000Credits",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Types/PickUps/Credits/3000Credits",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarParryReflectMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarParryMeleeMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarFallingImpactMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponDamageAmountMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponDamageAmountMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponPunctureDepthMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/DualStat/FireEventMeleeMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/DualStat/IceEventMeleeMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/RangerSystemsBlueprint",
+                itemCount: 1,
+                probability: 0.0909
+            }
+        ]
+    ],
+    "/Lotus/Types/Game/MissionDecks/SpyMissionRewards/SpyMediumMissionRewards": [
+        [
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarHealthMaxMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponClipMaxMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponAmmoMaxMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponMeleeDamageMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponAmmoMaxMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponReloadSpeedMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponCritChanceMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponArmorPiercingDamageMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponCritChanceMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/WeaponCritChanceMod",
+                itemCount: 1,
+                probability: 0.0909
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/CommonFusionBundle",
+                itemCount: 1,
+                probability: 0.0909
+            }
+        ],
+        [
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponFireRateMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarShieldRechargeRateMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarSprintSpeedMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponCritDamageMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponArmorPiercingDamageMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponDamageAmountMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponDamageAmountMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponMeleeChargeRateMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponFreezeDamageMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponFreezeDamageMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponFreezeDamageMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/WeaponFireIterationsMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarAbilityEfficiencyMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponElectricityDamageMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponElectricityDamageMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/WeaponDamageAmountMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponFireRateMod",
+                itemCount: 1,
+                probability: 0.0556
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/UncommonFusionBundle",
+                itemCount: 1,
+                probability: 0.0556
+            }
+        ],
+        [
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponPunctureDepthMod",
+                itemCount: 1,
+                probability: 0.0564
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/DualStat/IceEventRifleMod",
+                itemCount: 1,
+                probability: 0.0564
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/DualStat/FireEventShotgunMod",
+                itemCount: 1,
+                probability: 0.0564
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/RareFusionBundle",
+                itemCount: 1,
+                probability: 0.0968
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/RangerChassisBlueprint",
+                itemCount: 1,
+                probability: 0.0564
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionZephyrPrimeBBronze",
+                itemCount: 1,
+                probability: 0.0968
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionChromaPrimeBBronze",
+                itemCount: 1,
+                probability: 0.0968
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionWukongPrimeCBronze",
+                itemCount: 1,
+                probability: 0.0968
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionAtlasPrimeABronze",
+                itemCount: 1,
+                probability: 0.0968
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionAtlasPrimeBBronze",
+                itemCount: 1,
+                probability: 0.0968
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionEquinoxPrimeBBronze",
+                itemCount: 1,
+                probability: 0.0968
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Game/Projections/T2VoidProjectionAtlasPrimeCBronze",
+                itemCount: 1,
+                probability: 0.0968
+            }
+        ]
+    ],
+    "/Lotus/Types/Game/MissionDecks/SpyMissionRewards/SpyMoonMissionRewards": [
+        [
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/Event/ComboCritChanceMod",
+                itemCount: 1,
+                probability: 0.1218
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/Event/CritChanceWhileAimingPistolMod",
+                itemCount: 1,
+                probability: 0.1218
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/Event/CritDamageWhileAimingShotgunMod",
+                itemCount: 1,
+                probability: 0.1218
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/UncommonFusionBundle",
+                itemCount: 2,
+                probability: 0.1218
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponReloadSpeedMod",
+                itemCount: 1,
+                probability: 0.1218
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponCritChanceMod",
+                itemCount: 1,
+                probability: 0.1218
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponArmorPiercingDamageMod",
+                itemCount: 1,
+                probability: 0.1218
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponCritChanceMod",
+                itemCount: 1,
+                probability: 0.1218
+            },
+            {
+                type: "/Lotus/StoreItems/Weapons/Tenno/Melee/MeleeTrees/DualDaggerCmbTwoMeleeTree",
+                itemCount: 1,
+                probability: 0.0129
+            },
+            {
+                type: "/Lotus/StoreItems/Weapons/Tenno/Melee/MeleeTrees/GlaiveCmbTwoMeleeTree",
+                itemCount: 1,
+                probability: 0.0129
+            }
+        ],
+        [
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/Channel/ChannelArmourMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/Event/StatusProcWhileAimingRifleMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponCritDamageMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponArmorPiercingDamageMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponDamageAmountMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponDamageAmountMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponMeleeChargeRateMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Pistol/WeaponFreezeDamageMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponFreezeDamageMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponFreezeDamageMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/WeaponFireIterationsMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Warframe/AvatarAbilityEfficiencyMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Melee/WeaponElectricityDamageMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/WeaponElectricityDamageMod",
+                itemCount: 1,
+                probability: 0.0649
+            },
+            {
+                type: "/Lotus/StoreItems/Weapons/Tenno/Melee/MeleeTrees/GunbladeCmbOneMeleeTree",
+                itemCount: 1,
+                probability: 0.0129
+            },
+            {
+                type: "/Lotus/StoreItems/Weapons/Tenno/Melee/MeleeTrees/HammerCmbTwoMeleeTree",
+                itemCount: 1,
+                probability: 0.0129
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/UncommonFusionBundle",
+                itemCount: 3,
+                probability: 0.0649
+            }
+        ],
+        [
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Rifle/DualStat/IceEventRifleMod",
+                itemCount: 1,
+                probability: 0.0737
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/Shotgun/DualStat/FireEventShotgunMod",
+                itemCount: 1,
+                probability: 0.0737
+            },
+            {
+                type: "/Lotus/StoreItems/Upgrades/Mods/FusionBundles/RareFusionBundle",
+                itemCount: 5,
+                probability: 0.3794
+            },
+            {
+                type: "/Lotus/StoreItems/Weapons/Tenno/Melee/MeleeTrees/WhipCmbTwoMeleeTree",
+                itemCount: 1,
+                probability: 0.3794
+            },
+            {
+                type: "/Lotus/StoreItems/Weapons/Tenno/Melee/MeleeTrees/AxeCmbTwoMeleeTree",
+                itemCount: 1,
+                probability: 0.0201
+            },
+            {
+                type: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/RangerChassisBlueprint",
+                itemCount: 1,
+                probability: 0.0737
+            }
+        ]
+    ]
+};
+
+export const U42AbilityToLegacy: Record<string, string> = {
+    "/Lotus/Powersuits/YinYang/Abilities/YinYangSwitchAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/YinYangSwitchAbility",
+    "/Lotus/Powersuits/YinYang/Abilities/YinYangTargetAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/YinYangTargetAbility",
+    "/Lotus/Powersuits/YinYang/Abilities/YinYangAuraAbility": "/Lotus/Powersuits/PowersuitAbilities/YinYangAuraAbility",
+    "/Lotus/Powersuits/YinYang/Abilities/YinYangBurstAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/YinYangBurstAbility",
+    "/Lotus/Powersuits/Yareli/Abilities/YareliBubbleAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/YareliBubbleAbility",
+    "/Lotus/Powersuits/Yareli/Abilities/YareliBoardAbility": "/Lotus/Powersuits/PowersuitAbilities/YareliBoardAbility",
+    "/Lotus/Powersuits/Yareli/Abilities/YareliDisksAbility": "/Lotus/Powersuits/PowersuitAbilities/YareliDisksAbility",
+    "/Lotus/Powersuits/Yareli/Abilities/YareliSpoutAbility": "/Lotus/Powersuits/PowersuitAbilities/YareliSpoutAbility",
+    "/Lotus/Powersuits/Wraith/Abilities/WraithReapAbility": "/Lotus/Powersuits/PowersuitAbilities/WraithReapAbility",
+    "/Lotus/Powersuits/Wraith/Abilities/WraithSowAbility": "/Lotus/Powersuits/PowersuitAbilities/WraithSowAbility",
+    "/Lotus/Powersuits/Wraith/Abilities/WraithGloomAbility": "/Lotus/Powersuits/PowersuitAbilities/WraithGloomAbility",
+    "/Lotus/Powersuits/Wraith/Abilities/WraithReaperAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/WraithReaperAbility",
+    "/Lotus/Powersuits/Wisp/Abilities/WispReservoirAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/WispReservoirAbility",
+    "/Lotus/Powersuits/Wisp/Abilities/WispLightAbility": "/Lotus/Powersuits/PowersuitAbilities/WispLightAbility",
+    "/Lotus/Powersuits/Wisp/Abilities/WispHarnessAbility": "/Lotus/Powersuits/PowersuitAbilities/WispHarnessAbility",
+    "/Lotus/Powersuits/Wisp/Abilities/WispSunAbility": "/Lotus/Powersuits/PowersuitAbilities/WispSunAbility",
+    "/Lotus/Powersuits/Werewolf/Abilities/WerewolfShroudAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/WerewolfShroudAbility",
+    "/Lotus/Powersuits/Werewolf/Abilities/WerewolfBiteAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/WerewolfBiteAbility",
+    "/Lotus/Powersuits/Werewolf/Abilities/WerewolfLeapAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/WerewolfLeapAbility",
+    "/Lotus/Powersuits/Werewolf/Abilities/WerewolfHowlAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/WerewolfHowlAbility",
+    "/Lotus/Powersuits/Volt/Abilities/ShockAbility": "/Lotus/Powersuits/PowersuitAbilities/ShockAbility",
+    "/Lotus/Powersuits/Volt/Abilities/SpeedAbility": "/Lotus/Powersuits/PowersuitAbilities/SpeedAbility",
+    "/Lotus/Powersuits/Volt/Abilities/ShieldAbility": "/Lotus/Powersuits/PowersuitAbilities/ShieldAbility",
+    "/Lotus/Powersuits/Volt/Abilities/OverLoadAbility": "/Lotus/Powersuits/PowersuitAbilities/OverLoadAbility",
+    "/Lotus/Powersuits/Trinity/Abilities/WellOfLifeAbility": "/Lotus/Powersuits/PowersuitAbilities/WellOfLifeAbility",
+    "/Lotus/Powersuits/Trinity/Abilities/EnergyVampireAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/EnergyVampireAbility",
+    "/Lotus/Powersuits/Trinity/Abilities/LinkAbility": "/Lotus/Powersuits/PowersuitAbilities/LinkAbility",
+    "/Lotus/Powersuits/Trinity/Abilities/BlessingAbility": "/Lotus/Powersuits/PowersuitAbilities/BlessingAbility",
+    "/Lotus/Powersuits/Trapper/Abilities/ZapTrapAbility": "/Lotus/Powersuits/PowersuitAbilities/ZapTrapAbility",
+    "/Lotus/Powersuits/Trapper/Abilities/TrapperMultinadeAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/TrapperMultinadeAbility",
+    "/Lotus/Powersuits/Trapper/Abilities/TrapperStrikeAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/TrapperStrikeAbility",
+    "/Lotus/Powersuits/Trapper/Abilities/LevTrapAbility": "/Lotus/Powersuits/PowersuitAbilities/LevTrapAbility",
+    "/Lotus/Powersuits/Tengu/Abilities/TailWindAbility": "/Lotus/Powersuits/PowersuitAbilities/TailWindAbility",
+    "/Lotus/Powersuits/Tengu/Abilities/TenguBurstAbility": "/Lotus/Powersuits/PowersuitAbilities/TenguBurstAbility",
+    "/Lotus/Powersuits/Tengu/Abilities/TurbulenceAbility": "/Lotus/Powersuits/PowersuitAbilities/TurbulenceAbility",
+    "/Lotus/Powersuits/Tengu/Abilities/TornadoAbility": "/Lotus/Powersuits/PowersuitAbilities/TornadoAbility",
+    "/Lotus/Powersuits/Temple/Abilities/TempleShredAbility": "/Lotus/Powersuits/PowersuitAbilities/TempleShredAbility",
+    "/Lotus/Powersuits/Temple/Abilities/TempleSpeakersAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/TempleSpeakersAbility",
+    "/Lotus/Powersuits/Temple/Abilities/TempleSoloAbility": "/Lotus/Powersuits/PowersuitAbilities/TempleSoloAbility",
+    "/Lotus/Powersuits/Temple/Abilities/TempleGuitarAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/TempleGuitarAbility",
+    "/Lotus/Powersuits/Sentient/Abilities/SentientWhirlwindAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SentientWhirlwindAbility",
+    "/Lotus/Powersuits/Sentient/Abilities/SentientStompAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SentientStompAbility",
+    "/Lotus/Powersuits/Sentient/Abilities/SentientSummonAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SentientSummonAbility",
+    "/Lotus/Powersuits/Sentient/Abilities/SentientBlastAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SentientBlastAbility",
+    "/Lotus/Powersuits/Saryn/Abilities/PoisonAbility": "/Lotus/Powersuits/PowersuitAbilities/PoisonAbility",
+    "/Lotus/Powersuits/Saryn/Abilities/ShedAbility": "/Lotus/Powersuits/PowersuitAbilities/ShedAbility",
+    "/Lotus/Powersuits/Saryn/Abilities/WeaponPoisonAbility": "/Lotus/Powersuits/PowersuitAbilities/WeaponPoisonAbility",
+    "/Lotus/Powersuits/Saryn/Abilities/ExplosiveDissolveAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/ExplosiveDissolveAbility",
+    "/Lotus/Powersuits/Sandman/Abilities/SandmanBlastAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SandmanBlastAbility",
+    "/Lotus/Powersuits/Sandman/Abilities/SandmanStormAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SandmanStormAbility",
+    "/Lotus/Powersuits/Sandman/Abilities/SandmanArmorAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SandmanArmorAbility",
+    "/Lotus/Powersuits/Sandman/Abilities/SandmanSwarmAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SandmanSwarmAbility",
+    "/Lotus/Powersuits/Runner/Abilities/RunnerRushAbility": "/Lotus/Powersuits/PowersuitAbilities/RunnerRushAbility",
+    "/Lotus/Powersuits/Runner/Abilities/RunnerPlatingAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RunnerPlatingAbility",
+    "/Lotus/Powersuits/Runner/Abilities/RunnerTransferAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RunnerTransferAbility",
+    "/Lotus/Powersuits/Runner/Abilities/RunnerRedlineAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RunnerRedlineAbility",
+    "/Lotus/Powersuits/Rhino/Abilities/RhinoChargeAbility": "/Lotus/Powersuits/PowersuitAbilities/RhinoChargeAbility",
+    "/Lotus/Powersuits/Rhino/Abilities/IronSkinAbility": "/Lotus/Powersuits/PowersuitAbilities/IronSkinAbility",
+    "/Lotus/Powersuits/Rhino/Abilities/RhinoRoarAbility": "/Lotus/Powersuits/PowersuitAbilities/RhinoRoarAbility",
+    "/Lotus/Powersuits/Rhino/Abilities/RhinoStompAbility": "/Lotus/Powersuits/PowersuitAbilities/RhinoStompAbility",
+    "/Lotus/Powersuits/Revenant/Abilities/RevenantMarkAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RevenantMarkAbility",
+    "/Lotus/Powersuits/Revenant/Abilities/RevenantSentientAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RevenantSentientAbility",
+    "/Lotus/Powersuits/Revenant/Abilities/RevenantAfflictionAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RevenantAfflictionAbility",
+    "/Lotus/Powersuits/Revenant/Abilities/RevenantRebornAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RevenantRebornAbility",
+    "/Lotus/Powersuits/Ranger/Abilities/RangerQuiverAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RangerQuiverAbility",
+    "/Lotus/Powersuits/Ranger/Abilities/RangerControlAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RangerControlAbility",
+    "/Lotus/Powersuits/Ranger/Abilities/RangerStealAbility": "/Lotus/Powersuits/PowersuitAbilities/RangerStealAbility",
+    "/Lotus/Powersuits/Ranger/Abilities/RangerBowAbility": "/Lotus/Powersuits/PowersuitAbilities/RangerBowAbility",
+    "/Lotus/Powersuits/Priest/Abilities/PriestCondemnAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PriestCondemnAbility",
+    "/Lotus/Powersuits/Priest/Abilities/PriestPenanceAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PriestPenanceAbility",
+    "/Lotus/Powersuits/Priest/Abilities/PriestRavageAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PriestRavageAbility",
+    "/Lotus/Powersuits/Priest/Abilities/PriestPactAbility": "/Lotus/Powersuits/PowersuitAbilities/PriestPactAbility",
+    "/Lotus/Powersuits/Pirate/Abilities/CannonBarrageAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/CannonBarrageAbility",
+    "/Lotus/Powersuits/Pirate/Abilities/TidalWaveAbility": "/Lotus/Powersuits/PowersuitAbilities/TidalWaveAbility",
+    "/Lotus/Powersuits/Pirate/Abilities/PirateArmourAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PirateArmourAbility",
+    "/Lotus/Powersuits/Pirate/Abilities/KrakenAbility": "/Lotus/Powersuits/PowersuitAbilities/KrakenAbility",
+    "/Lotus/Powersuits/PaxDuviricus/Abilities/PaxTeleportAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PaxTeleportAbility",
+    "/Lotus/Powersuits/PaxDuviricus/Abilities/PaxBladesAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PaxBladesAbility",
+    "/Lotus/Powersuits/PaxDuviricus/Abilities/PaxLinkAbility": "/Lotus/Powersuits/PowersuitAbilities/PaxLinkAbility",
+    "/Lotus/Powersuits/PaxDuviricus/Abilities/PaxFieldAbility": "/Lotus/Powersuits/PowersuitAbilities/PaxFieldAbility",
+    "/Lotus/Powersuits/Paladin/Abilities/SmiteAbility": "/Lotus/Powersuits/PowersuitAbilities/SmiteAbility",
+    "/Lotus/Powersuits/Paladin/Abilities/StairwayToHeavenAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/StairwayToHeavenAbility",
+    "/Lotus/Powersuits/Paladin/Abilities/RegenerationAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RegenerationAbility",
+    "/Lotus/Powersuits/Paladin/Abilities/ReckoningAbility": "/Lotus/Powersuits/PowersuitAbilities/ReckoningAbility",
+    "/Lotus/Powersuits/Pagemaster/Abilities/PagemasterBookAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PagemasterBookAbility",
+    "/Lotus/Powersuits/Pagemaster/Abilities/PagemasterLifeAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PagemasterLifeAbility",
+    "/Lotus/Powersuits/Pagemaster/Abilities/PagemasterDeathAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PagemasterDeathAbility",
+    "/Lotus/Powersuits/Pagemaster/Abilities/PagemasterFinalChapterAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PagemasterFinalChapterAbility",
+    "/Lotus/Powersuits/Pacifist/Abilities/PacifistDodgeAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PacifistDodgeAbility",
+    "/Lotus/Powersuits/Pacifist/Abilities/PacifistWaveAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PacifistWaveAbility",
+    "/Lotus/Powersuits/Pacifist/Abilities/PacifistDisarmAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PacifistDisarmAbility",
+    "/Lotus/Powersuits/Pacifist/Abilities/PacifistFistAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/PacifistFistAbility",
+    "/Lotus/Powersuits/Oraxia/Abilities/OraxiaLungeAbility": "/Lotus/Powersuits/PowersuitAbilities/OraxiaLungeAbility",
+    "/Lotus/Powersuits/Oraxia/Abilities/OraxiaEntangleAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/OraxiaEntangleAbility",
+    "/Lotus/Powersuits/Oraxia/Abilities/OraxiaSpidersAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/OraxiaSpidersAbility",
+    "/Lotus/Powersuits/Oraxia/Abilities/OraxiaClimbAbility": "/Lotus/Powersuits/PowersuitAbilities/OraxiaClimbAbility",
+    "/Lotus/Powersuits/Odalisk/Abilities/OdaliskFanAbility": "/Lotus/Powersuits/PowersuitAbilities/OdaliskFanAbility",
+    "/Lotus/Powersuits/Odalisk/Abilities/OdaliskBFGAbility": "/Lotus/Powersuits/PowersuitAbilities/OdaliskBFGAbility",
+    "/Lotus/Powersuits/Odalisk/Abilities/OdaliskDispensaryAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/OdaliskDispensaryAbility",
+    "/Lotus/Powersuits/Odalisk/Abilities/OdaliskAnchorAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/OdaliskAnchorAbility",
+    "/Lotus/Powersuits/Nokko/Abilities/NokkoToxicShroomAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/NokkoToxicShroomAbility",
+    "/Lotus/Powersuits/Nokko/Abilities/NokkoPowerShroomAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/NokkoPowerShroomAbility",
+    "/Lotus/Powersuits/Nokko/Abilities/NokkoShrinkAbility": "/Lotus/Powersuits/PowersuitAbilities/NokkoShrinkAbility",
+    "/Lotus/Powersuits/Nokko/Abilities/NokkoLaunchAbility": "/Lotus/Powersuits/PowersuitAbilities/NokkoLaunchAbility",
+    "/Lotus/Powersuits/Ninja/Abilities/GlaiveAbility": "/Lotus/Powersuits/PowersuitAbilities/GlaiveAbility",
+    "/Lotus/Powersuits/Ninja/Abilities/SmokeScreenAbility": "/Lotus/Powersuits/PowersuitAbilities/SmokeScreenAbility",
+    "/Lotus/Powersuits/Ninja/Abilities/TeleportToAbility": "/Lotus/Powersuits/PowersuitAbilities/TeleportToAbility",
+    "/Lotus/Powersuits/Ninja/Abilities/NinjaStormAbility": "/Lotus/Powersuits/PowersuitAbilities/NinjaStormAbility",
+    "/Lotus/Powersuits/Nezha/Abilities/NezhaTrailAbility": "/Lotus/Powersuits/PowersuitAbilities/NezhaTrailAbility",
+    "/Lotus/Powersuits/Nezha/Abilities/NezhaRingAbility": "/Lotus/Powersuits/PowersuitAbilities/NezhaRingAbility",
+    "/Lotus/Powersuits/Nezha/Abilities/NezhaSashAbility": "/Lotus/Powersuits/PowersuitAbilities/NezhaSashAbility",
+    "/Lotus/Powersuits/Nezha/Abilities/NezhaSpearAbility": "/Lotus/Powersuits/PowersuitAbilities/NezhaSpearAbility",
+    "/Lotus/Powersuits/Necro/Abilities/SoulPunchAbility": "/Lotus/Powersuits/PowersuitAbilities/SoulPunchAbility",
+    "/Lotus/Powersuits/Necro/Abilities/TerrorTotemAbility": "/Lotus/Powersuits/PowersuitAbilities/TerrorTotemAbility",
+    "/Lotus/Powersuits/Necro/Abilities/SearchTheDeadAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SearchTheDeadAbility",
+    "/Lotus/Powersuits/Necro/Abilities/CloneTheDeadAbility": "/Lotus/Powersuits/PowersuitAbilities/CloneTheDeadAbility",
+    "/Lotus/Powersuits/MonkeyKing/Abilities/MonkeyHairAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/MonkeyHairAbility",
+    "/Lotus/Powersuits/MonkeyKing/Abilities/MonkeyCloudAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/MonkeyCloudAbility",
+    "/Lotus/Powersuits/MonkeyKing/Abilities/MonkeyDeathNewAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/MonkeyDeathNewAbility",
+    "/Lotus/Powersuits/MonkeyKing/Abilities/MonkeyStaffAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/MonkeyStaffAbility",
+    "/Lotus/Powersuits/Magician/Abilities/BanishAbility": "/Lotus/Powersuits/PowersuitAbilities/BanishAbility",
+    "/Lotus/Powersuits/Magician/Abilities/MagicianStasisAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/MagicianStasisAbility",
+    "/Lotus/Powersuits/Magician/Abilities/VolatileAbility": "/Lotus/Powersuits/PowersuitAbilities/VolatileAbility",
+    "/Lotus/Powersuits/Magician/Abilities/TearInSpaceAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/TearInSpaceAbility",
+    "/Lotus/Powersuits/Mag/Abilities/PullAbility": "/Lotus/Powersuits/PowersuitAbilities/PullAbility",
+    "/Lotus/Powersuits/Mag/Abilities/BulletAttractorAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/BulletAttractorAbility",
+    "/Lotus/Powersuits/Mag/Abilities/ShieldRegenAbility": "/Lotus/Powersuits/PowersuitAbilities/ShieldRegenAbility",
+    "/Lotus/Powersuits/Mag/Abilities/CrushAbility": "/Lotus/Powersuits/PowersuitAbilities/CrushAbility",
+    "/Lotus/Powersuits/Loki/Abilities/DecoyAbility": "/Lotus/Powersuits/PowersuitAbilities/DecoyAbility",
+    "/Lotus/Powersuits/Loki/Abilities/InvisibilityAbility": "/Lotus/Powersuits/PowersuitAbilities/InvisibilityAbility",
+    "/Lotus/Powersuits/Loki/Abilities/SwitchTeleportAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SwitchTeleportAbility",
+    "/Lotus/Powersuits/Loki/Abilities/RadialDisarmAbility": "/Lotus/Powersuits/PowersuitAbilities/RadialDisarmAbility",
+    "/Lotus/Powersuits/Koumei/Abilities/KoumeiStringsAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/KoumeiStringsAbility",
+    "/Lotus/Powersuits/Koumei/Abilities/KoumeiFortuneAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/KoumeiFortuneAbility",
+    "/Lotus/Powersuits/Koumei/Abilities/KoumeiBlockAbility": "/Lotus/Powersuits/PowersuitAbilities/KoumeiBlockAbility",
+    "/Lotus/Powersuits/Koumei/Abilities/KoumeiPuppetAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/KoumeiPuppetAbility",
+    "/Lotus/Powersuits/Khora/Abilities/KhoraCrackAbility": "/Lotus/Powersuits/PowersuitAbilities/KhoraCrackAbility",
+    "/Lotus/Powersuits/Khora/Abilities/KhoraTwirlAbility": "/Lotus/Powersuits/PowersuitAbilities/KhoraTwirlAbility",
+    "/Lotus/Powersuits/Khora/Abilities/KhoraKavatAbility": "/Lotus/Powersuits/PowersuitAbilities/KhoraKavatAbility",
+    "/Lotus/Powersuits/Khora/Abilities/KhoraCageAbility": "/Lotus/Powersuits/PowersuitAbilities/KhoraCageAbility",
+    "/Lotus/Powersuits/Jade/Abilities/MindControlAbility": "/Lotus/Powersuits/PowersuitAbilities/MindControlAbility",
+    "/Lotus/Powersuits/Jade/Abilities/DaggerAbility": "/Lotus/Powersuits/PowersuitAbilities/DaggerAbility",
+    "/Lotus/Powersuits/Jade/Abilities/ChaosAbility": "/Lotus/Powersuits/PowersuitAbilities/ChaosAbility",
+    "/Lotus/Powersuits/Jade/Abilities/SelfBulletAttractorAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SelfBulletAttractorAbility",
+    "/Lotus/Powersuits/IronFrame/Abilities/IronFrameBlastAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/IronFrameBlastAbility",
+    "/Lotus/Powersuits/IronFrame/Abilities/IronFrameStripAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/IronFrameStripAbility",
+    "/Lotus/Powersuits/IronFrame/Abilities/IronFrameAuraAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/IronFrameAuraAbility",
+    "/Lotus/Powersuits/IronFrame/Abilities/IronFrameEruptionAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/IronFrameEruptionAbility",
+    "/Lotus/Powersuits/Infestation/Abilities/InfestRuptureAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/InfestRuptureAbility",
+    "/Lotus/Powersuits/Infestation/Abilities/InfestTendrilsAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/InfestTendrilsAbility",
+    "/Lotus/Powersuits/Infestation/Abilities/InfestLinkAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/InfestLinkAbility",
+    "/Lotus/Powersuits/Infestation/Abilities/InfestPodsAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/InfestPodsAbility",
+    "/Lotus/Powersuits/Hoplite/Abilities/HopliteImpaleAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/HopliteImpaleAbility",
+    "/Lotus/Powersuits/Hoplite/Abilities/HopliteBashAbility": "/Lotus/Powersuits/PowersuitAbilities/HopliteBashAbility",
+    "/Lotus/Powersuits/Hoplite/Abilities/HopliteRallyAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/HopliteRallyAbility",
+    "/Lotus/Powersuits/Hoplite/Abilities/HopliteArmyAbility": "/Lotus/Powersuits/PowersuitAbilities/HopliteArmyAbility",
+    "/Lotus/Powersuits/Harlequin/Abilities/IllusionAbility": "/Lotus/Powersuits/PowersuitAbilities/IllusionAbility",
+    "/Lotus/Powersuits/Harlequin/Abilities/HarlequinObjectChangeAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/HarlequinObjectChangeAbility",
+    "/Lotus/Powersuits/Harlequin/Abilities/LightAbility": "/Lotus/Powersuits/PowersuitAbilities/LightAbility",
+    "/Lotus/Powersuits/Harlequin/Abilities/Prism": "/Lotus/Powersuits/PowersuitAbilities/Prism",
+    "/Lotus/Powersuits/Gyre/Abilities/GyrePulseAbility": "/Lotus/Powersuits/PowersuitAbilities/GyrePulseAbility",
+    "/Lotus/Powersuits/Gyre/Abilities/GyreSphereAbility": "/Lotus/Powersuits/PowersuitAbilities/GyreSphereAbility",
+    "/Lotus/Powersuits/Gyre/Abilities/GyreEnergizedAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/GyreEnergizedAbility",
+    "/Lotus/Powersuits/Gyre/Abilities/GyreOverchargedAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/GyreOverchargedAbility",
+    "/Lotus/Powersuits/Glass/Abilities/GlassShankAbility": "/Lotus/Powersuits/PowersuitAbilities/GlassShankAbility",
+    "/Lotus/Powersuits/Glass/Abilities/GlassShatterAbility": "/Lotus/Powersuits/PowersuitAbilities/GlassShatterAbility",
+    "/Lotus/Powersuits/Glass/Abilities/GlassFragmentAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/GlassFragmentAbility",
+    "/Lotus/Powersuits/Glass/Abilities/GlassRingAbility": "/Lotus/Powersuits/PowersuitAbilities/GlassRingAbility",
+    "/Lotus/Powersuits/Geode/Abilities/GeodeShardsAbility": "/Lotus/Powersuits/PowersuitAbilities/GeodeShardsAbility",
+    "/Lotus/Powersuits/Geode/Abilities/GeodeShellAbility": "/Lotus/Powersuits/PowersuitAbilities/GeodeShellAbility",
+    "/Lotus/Powersuits/Geode/Abilities/GeodeCrystalAbility": "/Lotus/Powersuits/PowersuitAbilities/GeodeCrystalAbility",
+    "/Lotus/Powersuits/Geode/Abilities/GeodeGrowthsAbility": "/Lotus/Powersuits/PowersuitAbilities/GeodeGrowthsAbility",
+    "/Lotus/Powersuits/Garuda/Abilities/GarudaShieldAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/GarudaShieldAbility",
+    "/Lotus/Powersuits/Garuda/Abilities/GarudaSiphonAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/GarudaSiphonAbility",
+    "/Lotus/Powersuits/Garuda/Abilities/GarudaBloodAbility": "/Lotus/Powersuits/PowersuitAbilities/GarudaBloodAbility",
+    "/Lotus/Powersuits/Garuda/Abilities/GarudaUnstoppableAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/GarudaUnstoppableAbility",
+    "/Lotus/Powersuits/Frumentarius/Abilities/FrumentariusScanAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/FrumentariusScanAbility",
+    "/Lotus/Powersuits/Frumentarius/Abilities/FrumentariusAmmoAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/FrumentariusAmmoAbility",
+    "/Lotus/Powersuits/Frumentarius/Abilities/FrumentariusCloakAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/FrumentariusCloakAbility",
+    "/Lotus/Powersuits/Frumentarius/Abilities/FrumentariusSniperAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/FrumentariusSniperAbility",
+    "/Lotus/Powersuits/Frost/Abilities/IcicleAbility": "/Lotus/Powersuits/PowersuitAbilities/IcicleAbility",
+    "/Lotus/Powersuits/Frost/Abilities/IceSpikeAbility": "/Lotus/Powersuits/PowersuitAbilities/IceSpikeAbility",
+    "/Lotus/Powersuits/Frost/Abilities/IceShieldAbility": "/Lotus/Powersuits/PowersuitAbilities/IceShieldAbility",
+    "/Lotus/Powersuits/Frost/Abilities/AvalancheAbility": "/Lotus/Powersuits/PowersuitAbilities/AvalancheAbility",
+    "/Lotus/Powersuits/Fairy/Abilities/FairyDustAbility": "/Lotus/Powersuits/PowersuitAbilities/FairyDustAbility",
+    "/Lotus/Powersuits/Fairy/Abilities/FairySoulAbility": "/Lotus/Powersuits/PowersuitAbilities/FairySoulAbility",
+    "/Lotus/Powersuits/Fairy/Abilities/FairyLightAbility": "/Lotus/Powersuits/PowersuitAbilities/FairyLightAbility",
+    "/Lotus/Powersuits/Fairy/Abilities/FairyFlightAbility": "/Lotus/Powersuits/PowersuitAbilities/FairyFlightAbility",
+    "/Lotus/Powersuits/Excalibur/Abilities/UmbraSlashDashNewAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/UmbraSlashDashNewAbility",
+    "/Lotus/Powersuits/Excalibur/Abilities/UmbraRadialRoarAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/UmbraRadialRoarAbility",
+    "/Lotus/Powersuits/Excalibur/Abilities/UmbraRadialJavelinAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/UmbraRadialJavelinAbility",
+    "/Lotus/Powersuits/Excalibur/Abilities/UmbraSwordOfDoomAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/UmbraSwordOfDoomAbility",
+    "/Lotus/Powersuits/Excalibur/Abilities/SlashDashNewAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SlashDashNewAbility",
+    "/Lotus/Powersuits/Excalibur/Abilities/RadialBlindAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RadialBlindAbility",
+    "/Lotus/Powersuits/Excalibur/Abilities/RadialJavelinAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RadialJavelinAbility",
+    "/Lotus/Powersuits/Excalibur/Abilities/SwordOfDoomAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SwordOfDoomAbility",
+    "/Lotus/Powersuits/Ember/Abilities/FireBallAbility": "/Lotus/Powersuits/PowersuitAbilities/FireBallAbility",
+    "/Lotus/Powersuits/Ember/Abilities/EmberImmolationAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/EmberImmolationAbility",
+    "/Lotus/Powersuits/Ember/Abilities/FireBlastAbility": "/Lotus/Powersuits/PowersuitAbilities/FireBlastAbility",
+    "/Lotus/Powersuits/Ember/Abilities/EmberInfernoAbility": "/Lotus/Powersuits/PowersuitAbilities/EmberInfernoAbility",
+    "/Lotus/Powersuits/Dragon/Abilities/DragonBreathAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DragonBreathAbility",
+    "/Lotus/Powersuits/Dragon/Abilities/DragonLuckAbility": "/Lotus/Powersuits/PowersuitAbilities/DragonLuckAbility",
+    "/Lotus/Powersuits/Dragon/Abilities/DragonScalesAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DragonScalesAbility",
+    "/Lotus/Powersuits/Dragon/Abilities/DragonPeltAbility": "/Lotus/Powersuits/PowersuitAbilities/DragonPeltAbility",
+    "/Lotus/Powersuits/Devourer/Abilities/DevourerDevourAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DevourerDevourAbility",
+    "/Lotus/Powersuits/Devourer/Abilities/DevourerConsumeAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DevourerConsumeAbility",
+    "/Lotus/Powersuits/Devourer/Abilities/DevourerBowlAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DevourerBowlAbility",
+    "/Lotus/Powersuits/Devourer/Abilities/DevourerRegurgitateAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DevourerRegurgitateAbility",
+    "/Lotus/Powersuits/DemonFrame/Abilities/DemonFrameFireBallAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DemonFrameFireBallAbility",
+    "/Lotus/Powersuits/DemonFrame/Abilities/DemonFrameHealAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DemonFrameHealAbility",
+    "/Lotus/Powersuits/DemonFrame/Abilities/DemonFrameCloneAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DemonFrameCloneAbility",
+    "/Lotus/Powersuits/DemonFrame/Abilities/DemonFrameBrimstoneAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DemonFrameBrimstoneAbility",
+    "/Lotus/Powersuits/Dagath/Abilities/DagathVolleyAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DagathVolleyAbility",
+    "/Lotus/Powersuits/Dagath/Abilities/DagathCurseAbility": "/Lotus/Powersuits/PowersuitAbilities/DagathCurseAbility",
+    "/Lotus/Powersuits/Dagath/Abilities/DagathApparitionAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/DagathApparitionAbility",
+    "/Lotus/Powersuits/Dagath/Abilities/DagathHorseAbility": "/Lotus/Powersuits/PowersuitAbilities/DagathHorseAbility",
+    "/Lotus/Powersuits/Cowgirl/Abilities/BallisticBatteryAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/BallisticBatteryAbility",
+    "/Lotus/Powersuits/Cowgirl/Abilities/RussianRouletteAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RussianRouletteAbility",
+    "/Lotus/Powersuits/Cowgirl/Abilities/RicochetArmorAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/RicochetArmorAbility",
+    "/Lotus/Powersuits/Cowgirl/Abilities/GunFuAbility": "/Lotus/Powersuits/PowersuitAbilities/GunFuAbility",
+    "/Lotus/Powersuits/ConcreteFrame/Abilities/ConcretePillarAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/ConcretePillarAbility",
+    "/Lotus/Powersuits/ConcreteFrame/Abilities/ConcreteWallAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/ConcreteWallAbility",
+    "/Lotus/Powersuits/ConcreteFrame/Abilities/ConcreteAuraAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/ConcreteAuraAbility",
+    "/Lotus/Powersuits/ConcreteFrame/Abilities/ConcreteLaserAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/ConcreteLaserAbility",
+    "/Lotus/Powersuits/Choir/Abilities/ChoirPoolAbility": "/Lotus/Powersuits/PowersuitAbilities/ChoirPoolAbility",
+    "/Lotus/Powersuits/Choir/Abilities/ChoirChorusAbility": "/Lotus/Powersuits/PowersuitAbilities/ChoirChorusAbility",
+    "/Lotus/Powersuits/Choir/Abilities/ChoirEyesAbility": "/Lotus/Powersuits/PowersuitAbilities/ChoirEyesAbility",
+    "/Lotus/Powersuits/Choir/Abilities/ChoirEruptAbility": "/Lotus/Powersuits/PowersuitAbilities/ChoirEruptAbility",
+    "/Lotus/Powersuits/BrokenFrame/Abilities/BrokenRotAbility": "/Lotus/Powersuits/PowersuitAbilities/BrokenRotAbility",
+    "/Lotus/Powersuits/BrokenFrame/Abilities/BrokenGraspAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/BrokenGraspAbility",
+    "/Lotus/Powersuits/BrokenFrame/Abilities/BrokenEmbraceAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/BrokenEmbraceAbility",
+    "/Lotus/Powersuits/BrokenFrame/Abilities/BrokenDestructAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/BrokenDestructAbility",
+    "/Lotus/Powersuits/Brawler/Abilities/BrawlerPunchAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/BrawlerPunchAbility",
+    "/Lotus/Powersuits/Brawler/Abilities/BrawlerBarrierAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/BrawlerBarrierAbility",
+    "/Lotus/Powersuits/Brawler/Abilities/BrawlerGazeAbility": "/Lotus/Powersuits/PowersuitAbilities/BrawlerGazeAbility",
+    "/Lotus/Powersuits/Brawler/Abilities/BrawlerSummonAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/BrawlerSummonAbility",
+    "/Lotus/Powersuits/Berserker/Abilities/GrappleHookAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/GrappleHookAbility",
+    "/Lotus/Powersuits/Berserker/Abilities/BerserkerScreamAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/BerserkerScreamAbility",
+    "/Lotus/Powersuits/Berserker/Abilities/ShieldBashAbility": "/Lotus/Powersuits/PowersuitAbilities/ShieldBashAbility",
+    "/Lotus/Powersuits/Berserker/Abilities/LastStandAbility": "/Lotus/Powersuits/PowersuitAbilities/LastStandAbility",
+    "/Lotus/Powersuits/Bard/Abilities/BardMusicAbility": "/Lotus/Powersuits/PowersuitAbilities/BardMusicAbility",
+    "/Lotus/Powersuits/Bard/Abilities/BardCharmAbility": "/Lotus/Powersuits/PowersuitAbilities/BardCharmAbility",
+    "/Lotus/Powersuits/Bard/Abilities/BardJamAbility": "/Lotus/Powersuits/PowersuitAbilities/BardJamAbility",
+    "/Lotus/Powersuits/Bard/Abilities/BardAmplifyAbility": "/Lotus/Powersuits/PowersuitAbilities/BardAmplifyAbility",
+    "/Lotus/Powersuits/Banshee/Abilities/PushAbility": "/Lotus/Powersuits/PowersuitAbilities/PushAbility",
+    "/Lotus/Powersuits/Banshee/Abilities/SonarAbility": "/Lotus/Powersuits/PowersuitAbilities/SonarAbility",
+    "/Lotus/Powersuits/Banshee/Abilities/SilenceAbility": "/Lotus/Powersuits/PowersuitAbilities/SilenceAbility",
+    "/Lotus/Powersuits/Banshee/Abilities/SonicEarthQuakeAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/SonicEarthQuakeAbility",
+    "/Lotus/Powersuits/AntiMatter/Abilities/NullStarAbility": "/Lotus/Powersuits/PowersuitAbilities/NullStarAbility",
+    "/Lotus/Powersuits/AntiMatter/Abilities/AntiMatterDrop": "/Lotus/Powersuits/PowersuitAbilities/AntiMatterDrop",
+    "/Lotus/Powersuits/AntiMatter/Abilities/WormHoleAbility": "/Lotus/Powersuits/PowersuitAbilities/WormHoleAbility",
+    "/Lotus/Powersuits/AntiMatter/Abilities/MolecularPrimeAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/MolecularPrimeAbility",
+    "/Lotus/Powersuits/Alchemist/Abilities/AlchemistSerpentAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/AlchemistSerpentAbility",
+    "/Lotus/Powersuits/Alchemist/Abilities/AlchemistVialAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/AlchemistVialAbility",
+    "/Lotus/Powersuits/Alchemist/Abilities/AlchemistTransmuteAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/AlchemistTransmuteAbility",
+    "/Lotus/Powersuits/Alchemist/Abilities/AlchemistDistillAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/AlchemistDistillAbility",
+    "/Lotus/Powersuits/EntratiMech/Abilities/EntratiMechOilGrenadeAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/EntratiMechOilGrenadeAbility",
+    "/Lotus/Powersuits/EntratiMech/Abilities/EntratiMechShockingIronAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/EntratiMechShockingIronAbility",
+    "/Lotus/Powersuits/EntratiMech/Abilities/EntratiMechMinefieldAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/EntratiMechMinefieldAbility",
+    "/Lotus/Powersuits/EntratiMech/Abilities/EntratiMechTurretModeAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/EntratiMechTurretModeAbility",
+    "/Lotus/Powersuits/EntratiMech/Abilities/EntratiMechGrabAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/EntratiMechGrabAbility",
+    "/Lotus/Powersuits/EntratiMech/Abilities/EntratiMechRiotShieldAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/EntratiMechRiotShieldAbility",
+    "/Lotus/Powersuits/EntratiMech/Abilities/EntratiMechRepulseAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/EntratiMechRepulseAbility",
+    "/Lotus/Powersuits/EntratiMech/Abilities/EntratiMechSwordAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/EntratiMechSwordAbility",
+    "/Lotus/Powersuits/Stalker/Stalker/Abilities/StalkerTeleportToAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/StalkerTeleportToAbility",
+    "/Lotus/Powersuits/Stalker/Stalker/Abilities/StalkerStunAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/StalkerStunAbility",
+    "/Lotus/Powersuits/Stalker/Stalker/Abilities/StalkerSmokeScreenAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/StalkerSmokeScreenAbility",
+    "/Lotus/Powersuits/Stalker/Stalker/Abilities/StalkerAbsorbAbility":
+        "/Lotus/Powersuits/PowersuitAbilities/StalkerAbsorbAbility"
+};
+
+interface IU5FingerprintData {
+    name?: string;
+    fits: { type: string; rarity: TRarity; statAtten?: number }[];
+    upgrades: IU5FingerprintUpgrade[];
+    numUpgrades: {
+        number: number;
+        rarity: TRarity;
+    }[];
+}
+
+export interface IU5FingerprintUpgrade {
+    type: string;
+    valueRarity: Record<Exclude<TRarity, "LEGENDARY">, [number, number]>;
+    rarity: TRarity;
+    operation: "MULTIPLY" | "ADD";
+    displayAsPercent?: true;
+}
+
+const U5WeaponUpgrades: IU5FingerprintUpgrade[] = [
+    {
+        type: "WEAPON_DAMAGE_AMOUNT",
+        valueRarity: {
+            COMMON: [1.015, 1.15],
+            UNCOMMON: [1.05, 1.25],
+            RARE: [1.1, 1.5]
+        },
+        rarity: "COMMON",
+        operation: "MULTIPLY"
+    },
+    {
+        type: "WEAPON_FIRE_DAMAGE",
+        valueRarity: {
+            COMMON: [0.015, 0.15],
+            UNCOMMON: [0.05, 0.25],
+            RARE: [0.1, 0.5]
+        },
+        rarity: "RARE",
+        operation: "ADD",
+        displayAsPercent: true
+    },
+    {
+        type: "WEAPON_ELECTRICITY_DAMAGE",
+        valueRarity: {
+            COMMON: [0.015, 0.15],
+            UNCOMMON: [0.05, 0.25],
+            RARE: [0.1, 0.5]
+        },
+        rarity: "COMMON",
+        operation: "ADD",
+        displayAsPercent: true
+    },
+    {
+        type: "WEAPON_FREEZE_DAMAGE",
+        valueRarity: {
+            COMMON: [0.015, 0.15],
+            UNCOMMON: [0.05, 0.25],
+            RARE: [0.1, 0.5]
+        },
+        rarity: "COMMON",
+        operation: "ADD",
+        displayAsPercent: true
+    },
+    {
+        type: "WEAPON_ARMOR_PIERCING_DAMAGE",
+        valueRarity: {
+            COMMON: [0.015, 0.15],
+            UNCOMMON: [0.05, 0.25],
+            RARE: [0.1, 0.5]
+        },
+        rarity: "COMMON",
+        operation: "ADD",
+        displayAsPercent: true
+    },
+    {
+        type: "WEAPON_STUN_CHANCE",
+        valueRarity: {
+            COMMON: [0.025, 0.1],
+            UNCOMMON: [0.05, 0.2],
+            RARE: [0.1, 0.4]
+        },
+        rarity: "UNCOMMON",
+        operation: "ADD",
+        displayAsPercent: true
+    },
+    {
+        type: "WEAPON_CLIP_MAX",
+        valueRarity: {
+            COMMON: [1.05, 1.35],
+            UNCOMMON: [1.1, 1.5],
+            RARE: [1.15, 2]
+        },
+        rarity: "UNCOMMON",
+        operation: "MULTIPLY"
+    },
+    {
+        type: "WEAPON_FIRE_ITERATIONS",
+        valueRarity: {
+            COMMON: [1.25, 1.75],
+            UNCOMMON: [1.5, 2],
+            RARE: [2, 4]
+        },
+        rarity: "RARE",
+        operation: "MULTIPLY"
+    },
+    {
+        type: "WEAPON_PUNCTURE_DEPTH",
+        valueRarity: {
+            COMMON: [2, 5],
+            UNCOMMON: [2, 10],
+            RARE: [3, 15]
+        },
+        rarity: "RARE",
+        operation: "ADD"
+    },
+    {
+        type: "WEAPON_AMMO_MAX",
+        valueRarity: {
+            COMMON: [1.05, 1.5],
+            UNCOMMON: [1.1, 1.75],
+            RARE: [1.15, 2]
+        },
+        rarity: "UNCOMMON",
+        operation: "MULTIPLY"
+    },
+    {
+        type: "WEAPON_RELOAD_SPEED",
+        valueRarity: {
+            COMMON: [1.05, 1.5],
+            UNCOMMON: [1.075, 1.75],
+            RARE: [1.1, 2]
+        },
+        rarity: "UNCOMMON",
+        operation: "MULTIPLY"
+    },
+    {
+        type: "WEAPON_FIRE_RATE",
+        valueRarity: {
+            COMMON: [1.01, 1.2],
+            UNCOMMON: [1.05, 1.5],
+            RARE: [1.1, 1.75]
+        },
+        rarity: "UNCOMMON",
+        operation: "MULTIPLY"
+    },
+    {
+        type: "WEAPON_CRIT_CHANCE",
+        valueRarity: {
+            COMMON: [0.0099999998, 0.1],
+            UNCOMMON: [0.025, 0.15],
+            RARE: [0.05, 0.2]
+        },
+        rarity: "COMMON",
+        operation: "ADD",
+        displayAsPercent: true
+    },
+    {
+        type: "WEAPON_CRIT_DAMAGE",
+        valueRarity: {
+            COMMON: [0.1, 0.5],
+            UNCOMMON: [0.2, 1],
+            RARE: [0.3, 1.5]
+        },
+        rarity: "COMMON",
+        operation: "ADD",
+        displayAsPercent: true
+    }
+];
+
+// couldn't find actual weights
+export const U5ModsWeights: Record<TRarity, number> = {
+    COMMON: 0.75,
+    UNCOMMON: 0.2,
+    RARE: 0.05,
+    LEGENDARY: 0
+};
+
+export const U5Modules: Record<string, IU5FingerprintData> = {
+    "/Lotus/Upgrades/Modules/Crafted/IncendiaryRifleMod": {
+        name: "/Lotus/Language/Items/InfernoMod",
+        fits: [
+            {
+                type: "/Lotus/Weapons/Tenno/Rifle/Rifle",
+                rarity: "COMMON"
+            }
+        ],
+        upgrades: [
+            {
+                type: "WEAPON_FIRE_DAMAGE",
+                valueRarity: {
+                    COMMON: [0.025, 0.3],
+                    UNCOMMON: [0.05, 0.4],
+                    RARE: [0.1, 0.7]
+                },
+                rarity: "COMMON",
+                operation: "ADD",
+                displayAsPercent: true
+            }
+        ],
+        numUpgrades: [{ number: 1, rarity: "COMMON" }]
+    },
+    "/Lotus/Upgrades/Modules/GrineerMeleeModule": {
+        fits: [
+            {
+                type: "/Lotus/Types/Game/LotusMeleeWeapon",
+                rarity: "COMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Melee/DualShortSword/DualShortSword",
+                rarity: "UNCOMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Melee/LongSword/LongSword",
+                rarity: "UNCOMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Melee/Staff/Staff",
+                rarity: "UNCOMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Melee/Fist/Fist",
+                rarity: "UNCOMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Melee/Dagger/Dagger",
+                rarity: "UNCOMMON"
+            }
+        ],
+        upgrades: [
+            {
+                type: "WEAPON_MELEE_DAMAGE",
+                valueRarity: {
+                    COMMON: [1.05, 1.15],
+                    UNCOMMON: [1.075, 1.25],
+                    RARE: [1.15, 1.5]
+                },
+                rarity: "COMMON",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "WEAPON_FIRE_DAMAGE",
+                valueRarity: {
+                    COMMON: [0.05, 0.15],
+                    UNCOMMON: [0.075, 0.25],
+                    RARE: [0.1, 0.5]
+                },
+                rarity: "RARE",
+                operation: "ADD",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_ELECTRICITY_DAMAGE",
+                valueRarity: {
+                    COMMON: [0.05, 0.15],
+                    UNCOMMON: [0.075, 0.25],
+                    RARE: [0.1, 0.5]
+                },
+                rarity: "COMMON",
+                operation: "ADD",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_FREEZE_DAMAGE",
+                valueRarity: {
+                    COMMON: [0.05, 0.15],
+                    UNCOMMON: [0.075, 0.25],
+                    RARE: [0.1, 0.5]
+                },
+                rarity: "COMMON",
+                operation: "ADD",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_ARMOR_PIERCING_DAMAGE",
+                valueRarity: {
+                    COMMON: [0.05, 0.15],
+                    UNCOMMON: [0.075, 0.25],
+                    RARE: [0.1, 0.5]
+                },
+                rarity: "COMMON",
+                operation: "ADD",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_STUN_CHANCE",
+                valueRarity: {
+                    COMMON: [0.05, 0.1],
+                    UNCOMMON: [0.1, 0.2],
+                    RARE: [0.2, 0.4]
+                },
+                rarity: "UNCOMMON",
+                operation: "ADD",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_CRIT_CHANCE",
+                valueRarity: {
+                    COMMON: [0.01, 0.1],
+                    UNCOMMON: [0.02, 0.15],
+                    RARE: [0.05, 0.25]
+                },
+                rarity: "COMMON",
+                operation: "ADD",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_CRIT_DAMAGE",
+                valueRarity: {
+                    COMMON: [0.05, 1],
+                    UNCOMMON: [0.1, 1.5],
+                    RARE: [0.2, 2]
+                },
+                rarity: "COMMON",
+                operation: "ADD",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_MELEE_HEAVY_DAMAGE",
+                valueRarity: {
+                    COMMON: [1.025, 1.25],
+                    UNCOMMON: [1.05, 1.5],
+                    RARE: [1.15, 1.75]
+                },
+                rarity: "UNCOMMON",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "WEAPON_MELEE_CHARGE_RATE",
+                valueRarity: {
+                    COMMON: [0.025, 0.3],
+                    UNCOMMON: [0.05, 0.4],
+                    RARE: [0.1, 0.5]
+                },
+                rarity: "UNCOMMON",
+                operation: "ADD",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_FIRE_RATE",
+                valueRarity: {
+                    COMMON: [1.05, 1.15],
+                    UNCOMMON: [1.075, 1.35],
+                    RARE: [1.1, 1.5]
+                },
+                rarity: "UNCOMMON",
+                operation: "MULTIPLY"
+            }
+        ],
+        numUpgrades: [
+            { number: 1, rarity: "COMMON" },
+            { number: 1, rarity: "RARE" }
+        ]
+    },
+    "/Lotus/Upgrades/Modules/GrineerPistolModule": {
+        fits: [
+            {
+                type: "/Lotus/Weapons/Tenno/Pistol/LotusPistol",
+                rarity: "COMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Pistol/AutoPistol",
+                rarity: "RARE"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Pistol/BurstPistol",
+                rarity: "UNCOMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Pistol/CrossBow",
+                rarity: "UNCOMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Pistol/HandShotGun",
+                rarity: "UNCOMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Pistol/Pistol",
+                rarity: "UNCOMMON"
+            }
+        ],
+        upgrades: U5WeaponUpgrades,
+        numUpgrades: [
+            { number: 1, rarity: "COMMON" },
+            { number: 1, rarity: "RARE" }
+        ]
+    },
+    "/Lotus/Upgrades/Modules/GrineerRifleModule": {
+        fits: [
+            {
+                type: "/Lotus/Weapons/Tenno/Rifle/LotusRifle",
+                rarity: "COMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Rifle/BurstRifle",
+                rarity: "UNCOMMON",
+                statAtten: 1.2
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Rifle/SniperRifle",
+                rarity: "RARE",
+                statAtten: 1.1
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Rifle/HeavyRifle",
+                rarity: "RARE",
+                statAtten: 1.3
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Rifle/Rifle",
+                rarity: "UNCOMMON",
+                statAtten: 1.2
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Rifle/SemiAutoRifle",
+                rarity: "UNCOMMON",
+                statAtten: 1.1
+            }
+        ],
+        upgrades: U5WeaponUpgrades,
+        numUpgrades: [
+            { number: 1, rarity: "COMMON" },
+            { number: 1, rarity: "RARE" }
+        ]
+    },
+    "/Lotus/Upgrades/Modules/GrineerShotgunModule": {
+        fits: [
+            {
+                type: "/Lotus/Weapons/Tenno/Shotgun/LotusShotgun",
+                rarity: "COMMON",
+                statAtten: 1
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Shotgun/Shotgun",
+                rarity: "UNCOMMON",
+                statAtten: 1.2
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Shotgun/FullAutoShotgun",
+                rarity: "RARE",
+                statAtten: 1.1
+            }
+        ],
+        upgrades: U5WeaponUpgrades,
+        numUpgrades: [
+            { number: 1, rarity: "COMMON" },
+            { number: 1, rarity: "RARE" }
+        ]
+    },
+    "/Lotus/Upgrades/Modules/OrokinWarframeModule": {
+        fits: [
+            {
+                type: "/Lotus/Types/Game/PowerSuit",
+                rarity: "COMMON"
+            },
+            {
+                type: "/Lotus/Powersuits/Ember/Ember",
+                rarity: "UNCOMMON",
+                statAtten: 1.2
+            },
+            {
+                type: "/Lotus/Powersuits/Excalibur/Excalibur",
+                rarity: "UNCOMMON",
+                statAtten: 1.1
+            },
+            {
+                type: "/Lotus/Powersuits/Loki/Loki",
+                rarity: "UNCOMMON",
+                statAtten: 1.1
+            },
+            {
+                type: "/Lotus/Powersuits/Mag/Mag",
+                rarity: "UNCOMMON",
+                statAtten: 1.1
+            },
+            {
+                type: "/Lotus/Powersuits/Ninja/Ninja",
+                rarity: "UNCOMMON",
+                statAtten: 1.1
+            },
+            {
+                type: "/Lotus/Powersuits/Rhino/Rhino",
+                rarity: "UNCOMMON",
+                statAtten: 1.1
+            },
+            {
+                type: "/Lotus/Powersuits/Trinity/Trinity",
+                rarity: "UNCOMMON",
+                statAtten: 1.1
+            },
+            {
+                type: "/Lotus/Powersuits/Volt/Volt",
+                rarity: "UNCOMMON",
+                statAtten: 1.1
+            }
+        ],
+        upgrades: [
+            {
+                type: "AVATAR_SHIELD_MAX",
+                valueRarity: {
+                    COMMON: [1.05, 1.4],
+                    UNCOMMON: [1.1, 1.7],
+                    RARE: [1.2, 2]
+                },
+                rarity: "COMMON",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "AVATAR_ARMOUR",
+                valueRarity: {
+                    COMMON: [1.05, 1.4],
+                    UNCOMMON: [1.1, 1.7],
+                    RARE: [1.2, 2]
+                },
+                rarity: "COMMON",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "AVATAR_HEALTH_MAX",
+                valueRarity: {
+                    COMMON: [1.1, 1.4],
+                    UNCOMMON: [1.15, 1.8],
+                    RARE: [1.2, 2]
+                },
+                rarity: "UNCOMMON",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "AVATAR_POWER_MAX",
+                valueRarity: {
+                    COMMON: [1.05, 1.4],
+                    UNCOMMON: [1.1, 1.75],
+                    RARE: [1.15, 2]
+                },
+                rarity: "RARE",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "AVATAR_SHIELD_RECHARGE_RATE",
+                valueRarity: {
+                    COMMON: [1.05, 1.4],
+                    UNCOMMON: [1.1, 1.75],
+                    RARE: [1.15, 2]
+                },
+                rarity: "UNCOMMON",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "WEAPON_MELEE_DAMAGE",
+                valueRarity: {
+                    COMMON: [1.05, 1.4],
+                    UNCOMMON: [1.1, 1.75],
+                    RARE: [1.15, 2]
+                },
+                rarity: "UNCOMMON",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "AVATAR_SPRINT_SPEED",
+                valueRarity: {
+                    COMMON: [1.03, 1.1],
+                    UNCOMMON: [1.05, 1.25],
+                    RARE: [1.1, 1.35]
+                },
+                rarity: "UNCOMMON",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "AVATAR_ENEMY_RADAR",
+                valueRarity: {
+                    COMMON: [15, 20],
+                    UNCOMMON: [20, 40],
+                    RARE: [25, 60]
+                },
+                rarity: "RARE",
+                operation: "ADD"
+            },
+            {
+                type: "AVATAR_LOOT_RADAR",
+                valueRarity: {
+                    COMMON: [15, 20],
+                    UNCOMMON: [20, 40],
+                    RARE: [25, 60]
+                },
+                rarity: "UNCOMMON",
+                operation: "ADD"
+            },
+            {
+                type: "AVATAR_ABILITY_RANGE",
+                valueRarity: {
+                    COMMON: [1.05, 1.4],
+                    UNCOMMON: [1.1, 1.5],
+                    RARE: [1.15, 1.8]
+                },
+                rarity: "UNCOMMON",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "AVATAR_ABILITY_DURATION",
+                valueRarity: {
+                    COMMON: [1.02, 1.3],
+                    UNCOMMON: [1.05, 1.4],
+                    RARE: [1.05, 1.5]
+                },
+                rarity: "RARE",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "AVATAR_ABILITY_EFFICIENCY",
+                valueRarity: {
+                    COMMON: [1.03, 1.3],
+                    UNCOMMON: [1.05, 1.5],
+                    RARE: [1.1, 1.7]
+                },
+                rarity: "RARE",
+                operation: "MULTIPLY"
+            },
+            {
+                type: "AVATAR_ABILITY_STRENGTH",
+                valueRarity: {
+                    COMMON: [1.03, 1.4],
+                    UNCOMMON: [1.05, 1.5],
+                    RARE: [1.1, 1.7]
+                },
+                rarity: "RARE",
+                operation: "MULTIPLY"
+            }
+        ],
+        numUpgrades: [
+            { number: 1, rarity: "COMMON" },
+            { number: 1, rarity: "RARE" }
+        ]
+    },
+    "/Lotus/Upgrades/Modules/TennoSwordModule": {
+        fits: [
+            {
+                type: "/Lotus/Types/Game/LotusMeleeWeapon",
+                rarity: "COMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Melee/DualShortSword/DualShortSword",
+                rarity: "UNCOMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Melee/LongSword/LongSword",
+                rarity: "UNCOMMON"
+            },
+            {
+                type: "/Lotus/Weapons/Tenno/Melee/Staff/Staff",
+                rarity: "UNCOMMON"
+            }
+        ],
+        upgrades: [
+            {
+                type: "WEAPON_MELEE_DAMAGE",
+                operation: "MULTIPLY",
+                valueRarity: {
+                    COMMON: [1.05, 1.15],
+                    UNCOMMON: [1.075, 1.25],
+                    RARE: [1.15, 1.5]
+                },
+                rarity: "COMMON"
+            },
+            {
+                type: "WEAPON_FIRE_DAMAGE",
+                operation: "ADD",
+                valueRarity: {
+                    COMMON: [0.05, 0.15],
+                    UNCOMMON: [0.075, 0.25],
+                    RARE: [0.1, 0.5]
+                },
+                rarity: "RARE",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_ELECTRICITY_DAMAGE",
+                operation: "ADD",
+                valueRarity: {
+                    COMMON: [0.05, 0.15],
+                    UNCOMMON: [0.075, 0.25],
+                    RARE: [0.1, 0.5]
+                },
+                rarity: "COMMON",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_FREEZE_DAMAGE",
+                operation: "ADD",
+                valueRarity: {
+                    COMMON: [0.05, 0.15],
+                    UNCOMMON: [0.075, 0.25],
+                    RARE: [0.1, 0.5]
+                },
+                rarity: "COMMON",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_ARMOR_PIERCING_DAMAGE",
+                operation: "ADD",
+                valueRarity: {
+                    COMMON: [0.05, 0.15],
+                    UNCOMMON: [0.075, 0.25],
+                    RARE: [0.1, 0.5]
+                },
+                rarity: "COMMON",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_STUN_CHANCE",
+                operation: "ADD",
+                valueRarity: {
+                    COMMON: [0.05, 0.1],
+                    UNCOMMON: [0.1, 0.2],
+                    RARE: [0.2, 0.4]
+                },
+                rarity: "UNCOMMON",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_CRIT_CHANCE",
+                operation: "ADD",
+                valueRarity: {
+                    COMMON: [0.01, 0.1],
+                    UNCOMMON: [0.02, 0.15],
+                    RARE: [0.05, 0.25]
+                },
+                rarity: "COMMON",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_CRIT_DAMAGE",
+                operation: "ADD",
+                valueRarity: {
+                    COMMON: [0.05, 1],
+                    UNCOMMON: [0.1, 1.5],
+                    RARE: [0.2, 2]
+                },
+                rarity: "COMMON",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_MELEE_HEAVY_DAMAGE",
+                operation: "MULTIPLY",
+                valueRarity: {
+                    COMMON: [1.025, 1.25],
+                    UNCOMMON: [1.05, 1.5],
+                    RARE: [1.15, 1.75]
+                },
+                rarity: "UNCOMMON"
+            },
+            {
+                type: "WEAPON_MELEE_CHARGE_RATE",
+                operation: "ADD",
+                valueRarity: {
+                    COMMON: [0.025, 0.3],
+                    UNCOMMON: [0.05, 0.4],
+                    RARE: [0.1, 0.5]
+                },
+                rarity: "UNCOMMON",
+                displayAsPercent: true
+            },
+            {
+                type: "WEAPON_FIRE_RATE",
+                operation: "MULTIPLY",
+                valueRarity: {
+                    COMMON: [1.05, 1.15],
+                    UNCOMMON: [1.075, 1.35],
+                    RARE: [1.1, 1.5]
+                },
+                rarity: "UNCOMMON"
+            }
+        ],
+        numUpgrades: [
+            { number: 1, rarity: "COMMON" },
+            { number: 1, rarity: "RARE" }
+        ]
+    }
+};
+
+const modularPartIntroductions: Record<string, number> = {
+    // Zaws
+    "/Lotus/Weapons/Ostron/Melee/ModularMelee01/": gameToBuildVersionInt["22.0.0"],
+    "/Lotus/Weapons/Ostron/Melee/ModularMeleeInfested/": buildLabelToVersionInt("2017.11.15.00.00"), // U22.3
+    "/Lotus/Weapons/Ostron/Melee/ModularMelee02/": gameToBuildVersionInt["22.18.0"],
+    // Amps
+    "/Lotus/Weapons/Sentients/OperatorAmplifiers/SentTrainingAmplifier/": gameToBuildVersionInt["22.0.0"],
+    "/Lotus/Weapons/Sentients/OperatorAmplifiers/Set1/": gameToBuildVersionInt["22.0.0"],
+    "/Lotus/Weapons/Sentients/OperatorAmplifiers/Set2/": buildLabelToVersionInt("2018.08.16.00.00"), // U23.4
+    "/Lotus/Weapons/Corpus/OperatorAmplifiers/Set1/": gameToBuildVersionInt["24.2.0"],
+    // Kitguns
+    "/Lotus/Weapons/SolarisUnited/Secondary/SUModularSecondarySet1/": gameToBuildVersionInt["24.0.0"],
+    "/Lotus/Weapons/SolarisUnited/Primary/SUModularPrimarySet1/": gameToBuildVersionInt["28.0.0"],
+    "/Lotus/Weapons/Infested/Pistols/InfKitGun/": gameToBuildVersionInt["29.5.0"],
+    // K-Drives
+    "/Lotus/Types/Vehicles/Hoverboard/HoverboardParts/PartComponents/HoverboardSolarisA/":
+        gameToBuildVersionInt["24.0.0"],
+    "/Lotus/Types/Vehicles/Hoverboard/HoverboardParts/PartComponents/HoverboardCorpusA/":
+        gameToBuildVersionInt["24.0.0"],
+    "/Lotus/Types/Vehicles/Hoverboard/HoverboardParts/PartComponents/HoverboardCorpusB/":
+        gameToBuildVersionInt["24.0.0"],
+    "/Lotus/Types/Vehicles/Hoverboard/HoverboardParts/PartComponents/HoverboardCorpusC/":
+        gameToBuildVersionInt["24.4.0"],
+    "/Lotus/Types/Vehicles/Hoverboard/HoverboardParts/PartComponents/HoverboardInfestedB/":
+        gameToBuildVersionInt["29.5.0"],
+    // Predasites & Vulpaphylas
+    "/Lotus/Types/Friendly/Pets/CreaturePets/CreaturePetParts/Deimos/": gameToBuildVersionInt["29.0.0"],
+    "/Lotus/Types/Items/Deimos/WoundedInfested": gameToBuildVersionInt["29.0.0"],
+    // Hounds
+    "/Lotus/Types/Friendly/Pets/ZanukaPets/ZanukaPetParts/": gameToBuildVersionInt["30.5.0"]
+};
+
+interface legacyCacheKey {
+    target: string;
+    buildLabel: string;
+}
+
+const legacyCacheKeyStore = new Map<string, legacyCacheKey>();
+const legacyIndexCache = new WeakMap<legacyCacheKey, string[]>();
+const legacyBoosterPacksCache = new WeakMap<legacyCacheKey, Partial<IBoosterPack>>();
+const legacySolarMapCache = new WeakMap<legacyCacheKey, Record<string, IRegion>>();
+const legacySyndicatesCache = new WeakMap<legacyCacheKey, ISyndicate>();
+
+const getLegacyCacheKey = (target: string, buildLabel: string): legacyCacheKey => {
+    const id = `${target}:${buildLabel}`;
+    let obj = legacyCacheKeyStore.get(id);
+
+    if (!obj) {
+        obj = { target, buildLabel };
+        legacyCacheKeyStore.set(id, obj);
+    }
+
+    return obj;
+};
+
+const getLegacyDataVersion = async (target: string, buildLabel: string): Promise<string | null> => {
+    const index = await getLegacyData<string[]>(legacyIndexCache, target, "index");
+    let selected: string | null = null;
+    for (const v of index) {
+        if (version_compare(v, buildLabel) <= 0) {
+            selected = v;
+        } else {
+            break;
+        }
+    }
+    return selected;
+};
+
+const getLegacyData = async <T>(cache: WeakMap<legacyCacheKey, T>, target: string, buildLabel: string): Promise<T> => {
+    const key = getLegacyCacheKey(target, buildLabel);
+    if (cache.has(key)) {
+        logger.trace(`Using cached ${buildLabel} data for ${target}`);
+        return cache.get(key)!;
+    }
+
+    const filePath = path.join("./static/fixed_responses/data", target, `${buildLabel}.json`);
+    const raw = await fs.readFile(filePath, "utf-8");
+    const json = JSON.parse(raw) as T;
+    cache.set(key, json);
+
+    logger.trace(`Cached ${buildLabel} data for ${target}`);
+
+    return json;
+};
+
+const getLegacyBoosterPackData = async (target: string, buildLabel: string): Promise<Partial<IBoosterPack>> =>
+    await getLegacyData<Partial<IBoosterPack>>(legacyBoosterPacksCache, target, buildLabel);
+
+const getLegacySolarMapData = async (target: string, buildLabel: string): Promise<Record<string, IRegion>> =>
+    await getLegacyData<Record<string, IRegion>>(legacySolarMapCache, target, buildLabel);
+
+const getLegacySyndicateData = async (target: string, buildLabel: string): Promise<ISyndicate> =>
+    await getLegacyData<ISyndicate>(legacySyndicatesCache, target, buildLabel);
+
+const getLegacyRandomProjectionData = (buildLabel: string): Partial<IBoosterPack> => {
+    const buildVersion = buildLabelToVersionInt(buildLabel);
+    const key = getLegacyCacheKey("RandomProjection", buildLabel);
+    if (legacyBoosterPacksCache.has(key)) {
+        logger.trace(`Using cached ${buildLabel} data for RandomProjection`);
+        return legacyBoosterPacksCache.get(key)!;
+    }
+    const relics: IBoosterPackComponent[] = Object.entries(ExportRelics)
+        .filter(([ItemType, relic]) => {
+            if (!relic.introducedAt) return false;
+            const iBuildVersion = wikiDateToBuildVersionInt(relic.introducedAt);
+            const vBuildVersion = relic.vaultedAt ? wikiDateToBuildVersionInt(relic.vaultedAt) : undefined;
+            const baroRelics = baro.rest
+                .filter(o => o.ItemType.startsWith("/Lotus/StoreItems/Types/Game/Projections/"))
+                .map(o => fromStoreItem(o.ItemType));
+            return (
+                !baroRelics.includes(ItemType) &&
+                !["Railjack", "Baro"].some(x => ItemType.includes(x)) &&
+                ["Axi", "Neo", "Meso", "Lith"].includes(relic.era) &&
+                relic.quality === "VPQ_BRONZE" &&
+                iBuildVersion <= buildVersion &&
+                (!vBuildVersion || vBuildVersion > buildVersion)
+            );
+        })
+        .map(([ItemType, relic]) => ({
+            Item: ItemType,
+            Amount: 1,
+            Rarity: relic.era === "Axi" ? "RARE" : relic.era === "Neo" ? "UNCOMMON" : "COMMON"
+        }));
+    const isAyaAvailable =
+        (buildVersion >= buildLabelToVersionInt("2021.11.16.00.00") && // U30.9.4
+            buildVersion < buildLabelToVersionInt("2022.01.25.24.00")) || // U31.0.11
+        buildVersion >= buildLabelToVersionInt("2022.09.14.00.00"); // U32.0.3
+    if (isAyaAvailable) {
+        for (const rarity of ["COMMON", "UNCOMMON", "RARE"] as TRarity[]) {
+            relics.push({
+                Item: "/Lotus/Types/Items/MiscItems/SchismKey",
+                Amount: 1,
+                Rarity: rarity
+            });
+        }
+    }
+
+    legacyBoosterPacksCache.set(key, { components: relics });
+    logger.trace(`Cached ${buildLabel} data for RandomProjection`);
+    return { components: relics };
+};
+
+export const selfTestRandomProjection = (): boolean => {
+    let allGood = true;
+
+    const lcomponents = getLegacyRandomProjectionData(BL_LATEST).components;
+    if (!("/Lotus/Types/BoosterPacks/RandomProjection" in ExportBoosterPacks) || !lcomponents) {
+        logger.warn("RandomProjection validation failed: clound't get components from either PE+ or legacy data");
+        allGood = false;
+        return allGood;
+    }
+    const pcomponents = ExportBoosterPacks["/Lotus/Types/BoosterPacks/RandomProjection"].components;
+
+    const componentEntries = Object.entries(pcomponents);
+    const legacyEntries = Object.entries(lcomponents);
+    const usedLegacy = new Set<string>();
+    const usedComponent = new Set<string>();
+
+    for (const [keyC, valC] of componentEntries) {
+        for (const [keyL, valL] of legacyEntries) {
+            if (usedLegacy.has(keyL)) continue;
+            if (
+                valC.Item === valL.Item &&
+                valC.Amount === valL.Amount &&
+                valC.Probability === valL.Probability &&
+                valC.PityIncreaseRate === valL.PityIncreaseRate &&
+                valC.Rarity === valL.Rarity
+            ) {
+                usedComponent.add(keyC);
+                usedLegacy.add(keyL);
+                break;
+            }
+        }
+    }
+
+    const remainingComponents = componentEntries.filter(([k]) => !usedComponent.has(k));
+    const remainingLegacy = legacyEntries.filter(([k]) => !usedLegacy.has(k));
+
+    if (remainingComponents.length > 0) {
+        allGood = false;
+        logger.warn(
+            "RandomProjection validation failed: extra components in PE+",
+            remainingComponents.map(([_, v]) => v)
+        );
+    }
+
+    if (remainingLegacy.length > 0) {
+        allGood = false;
+        logger.warn(
+            "RandomProjection validation failed: missing legacy matches",
+            remainingLegacy.map(([_, v]) => v)
+        );
+    }
+
+    return allGood;
+};
+
+export const getRecipe = (uniqueName: string, buildLabel: string): IRecipe | undefined => {
+    let data = ExportRecipes[uniqueName] ?? supplementalRecipes[uniqueName];
+    if (uniqueName == "/Lotus/Types/Recipes/WarframeRecipes/RhinoBlueprint") {
+        if (version_compare(buildLabel, gameToBuildVersion["39.0.0"]) < 0) {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    data.ingredients[2],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Gallium",
+                        ItemCount: 1
+                    }
+                ]
+            };
+            if (version_compare(buildLabel, gameToBuildVersion["38.5.0"]) < 0) {
+                data.buildTime = 259200;
+                // Update 19.13 (2017-03-09)
+                if (version_compare(buildLabel, "2017.03.09.00.00") < 0) {
+                    data.ingredients[3].ItemType = "/Lotus/Types/Items/MiscItems/OrokinCell";
+                }
+            }
+        }
+    } else if (uniqueName == "/Lotus/Types/Recipes/WarframeRecipes/RhinoChassisBlueprint") {
+        if (version_compare(buildLabel, gameToBuildVersion["39.0.0"]) < 0) {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Morphic",
+                        ItemCount: 1
+                    },
+                    data.ingredients[1],
+                    data.ingredients[2]
+                ]
+            };
+        }
+    } else if (uniqueName == "/Lotus/Types/Recipes/WarframeRecipes/RhinoHelmetBlueprint") {
+        if (version_compare(buildLabel, gameToBuildVersion["39.0.0"]) < 0) {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Morphic",
+                        ItemCount: 1
+                    },
+                    data.ingredients[2],
+                    data.ingredients[3]
+                ]
+            };
+            // Update 19.13 (2017-03-09)
+            if (version_compare(buildLabel, "2017.03.09.00.00") < 0) {
+                data.ingredients[1].ItemType = "/Lotus/Types/Items/MiscItems/NeuralSensor";
+            }
+        }
+    } else if (uniqueName == "/Lotus/Types/Recipes/WarframeRecipes/RhinoSystemsBlueprint") {
+        if (version_compare(buildLabel, gameToBuildVersion["39.0.0"]) < 0) {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Gallium",
+                        ItemCount: 1
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Morphic",
+                        ItemCount: 1
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Salvage",
+                        ItemCount: 500
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Plastids",
+                        ItemCount: 600
+                    }
+                ]
+            };
+            // Hotfix 30.0.6 (2021-04-20) Swapped the crafting requirement of Control Module for Gallium in Rhino Systems Blueprint to ease early player acquisition.
+            if (version_compare(buildLabel, "2021.04.20.00.00") < 0) {
+                data.ingredients[0].ItemType = "/Lotus/Types/Items/MiscItems/ControlModule";
+            }
+        }
+    } else if (uniqueName == "/Lotus/Types/Recipes/WarframeRecipes/ExcaliburBlueprint") {
+        if (version_compare(buildLabel, gameToBuildVersion["42.0.0"]) < 0) {
+            data = {
+                ...data,
+                buildTime: 259200
+            };
+        }
+    } else if (uniqueName == "/Lotus/Types/Recipes/WarframeRecipes/MagBlueprint") {
+        if (version_compare(buildLabel, gameToBuildVersion["42.0.0"]) < 0) {
+            data = {
+                ...data,
+                buildTime: 259200
+            };
+        }
+    } else if (uniqueName == "/Lotus/Types/Recipes/WarframeRecipes/VOLTBlueprint") {
+        if (version_compare(buildLabel, gameToBuildVersion["42.0.0"]) < 0) {
+            data = {
+                ...data,
+                buildTime: 259200
+            };
+        }
+    }
+
+    if (version_compare(buildLabel, gameToBuildVersion["9.1.2"]) < 0) {
+        // There was an undocumented change to this recipe's ingredients sometime between 8.3.0 and 9.1.2...
+        if (uniqueName == "/Lotus/Types/Recipes/Weapons/HuntingBowBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 1
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Circuits",
+                        ItemCount: 300
+                    },
+                    {
+                        ...data.ingredients[2],
+                        ItemCount: 500
+                    },
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 1250
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/DualAxeBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Ferrite",
+                        ItemCount: 600
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/AlloyPlate",
+                        ItemCount: 80
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/QuadShotgunBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 2
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/AlloyPlate",
+                        ItemCount: 500
+                    },
+                    {
+                        ...data.ingredients[2],
+                        ItemCount: 900
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/PolymerBundle",
+                        ItemCount: 100
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/DarkDaggerBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 1
+                    },
+                    data.ingredients[1],
+                    {
+                        ...data.ingredients[2],
+                        ItemCount: 150
+                    },
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 75
+                    }
+                ]
+            };
+        } else if (
+            [
+                "/Lotus/Types/Recipes/SentinelRecipes/DethCubeSentinelBlueprint",
+                "/Lotus/Types/Recipes/SentinelRecipes/ShadeSentinelBlueprint",
+                "/Lotus/Types/Recipes/SentinelRecipes/WyrmSentinelBlueprint"
+            ].includes(uniqueName)
+        ) {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 100
+                    },
+                    data.ingredients[1],
+                    data.ingredients[2],
+                    data.ingredients[3]
+                ]
+            };
+        } else if (
+            [
+                "/Lotus/Types/Recipes/WarframeRecipes/AshSystemsBlueprint",
+                "/Lotus/Types/Recipes/WarframeRecipes/FrostSystemsBlueprint",
+                "/Lotus/Types/Recipes/WarframeRecipes/RhinoSystemsBlueprint"
+            ].includes(uniqueName)
+        ) {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 220
+                    }
+                ]
+            };
+        } else if (
+            [
+                "/Lotus/Types/Recipes/Weapons/Skins/DaggerAxeBlueprint",
+                "/Lotus/Types/Recipes/Weapons/Skins/DualDaggerAxeBlueprint"
+            ].includes(uniqueName)
+        ) {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemType: "/Lotus/Types/Items/MiscItems/Rubedo"
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/StrunShotgunBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 2
+                    },
+                    {
+                        ...data.ingredients[1],
+                        ItemCount: 550
+                    },
+                    data.ingredients[2],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/PolymerBundle",
+                        ItemCount: 50
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/StalkerBowBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 5
+                    },
+                    {
+                        ...data.ingredients[1],
+                        ItemCount: 600
+                    },
+                    data.ingredients[2],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                        ItemCount: 1500
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/SnipetronBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 1
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Circuits",
+                        ItemCount: 300
+                    },
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 300
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/SkanaSwordBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 1
+                    },
+                    data.ingredients[1],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Ferrite",
+                        ItemCount: 700
+                    },
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 80
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/PolearmBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 2
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Salvage",
+                        ItemCount: 900
+                    },
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 100
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/PangolinSwordBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    {
+                        ...data.ingredients[2],
+                        ItemType: "/Lotus/Types/Items/MiscItems/Rubedo"
+                    },
+                    data.ingredients[3]
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/MireSwordBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 1
+                    },
+                    {
+                        ...data.ingredients[1],
+                        ItemCount: 500
+                    },
+                    {
+                        ...data.ingredients[2],
+                        ItemCount: 300
+                    },
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 75
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/MacheteBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 2
+                    },
+                    data.ingredients[1],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Ferrite",
+                        ItemCount: 700
+                    },
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 150
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/LatronBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 2
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Circuits",
+                        ItemCount: 350
+                    },
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 250
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/KogakeBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                        ItemCount: 900
+                    },
+                    {
+                        ...data.ingredients[1],
+                        ItemCount: 2
+                    },
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 120
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/HeatSwordBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 75
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/GrnStaffBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 1
+                    },
+                    data.ingredients[1],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Rubedo",
+                        ItemCount: 250
+                    },
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 100
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/GrnSniperRifleBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 1
+                    },
+                    {
+                        ...data.ingredients[1],
+                        ItemCount: 300
+                    },
+                    data.ingredients[2],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/AlloyPlate",
+                        ItemCount: 300
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/GorgonBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemType: "/Lotus/Types/Items/MiscItems/Rubedo"
+                    }
+                ]
+            };
+        } else if (
+            ["/Lotus/Types/Recipes/Weapons/GauntletBlueprint", "/Lotus/Types/Recipes/Weapons/FuraxBlueprint"].includes(
+                uniqueName
+            )
+        ) {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 700
+                    },
+                    data.ingredients[1],
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 150
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/FurisBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 2
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/EtherSwordBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 1
+                    },
+                    {
+                        ...data.ingredients[1],
+                        ItemCount: 750
+                    },
+                    {
+                        ...data.ingredients[2],
+                        ItemCount: 600
+                    },
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 100
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/DualSkanaSwordBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Salvage",
+                        ItemCount: 900
+                    },
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 80
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/DualHeatSwordBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    {
+                        ...data.ingredients[2],
+                        ItemCount: 850
+                    },
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/AlloyPlate",
+                        ItemCount: 80
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/DualEtherSwordBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 2
+                    },
+                    data.ingredients[1],
+                    data.ingredients[2],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/AlloyPlate",
+                        ItemCount: 80
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/DualCleaversBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 3
+                    },
+                    data.ingredients[1],
+                    {
+                        ...data.ingredients[2],
+                        ItemType: "/Lotus/Types/Items/MiscItems/Ferrite"
+                    },
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 250
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/CeramicDaggerBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 2
+                    },
+                    data.ingredients[1],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/Rubedo",
+                        ItemCount: 300
+                    },
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 75
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/BurstonRifleBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 100
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/BroncoBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    {
+                        ...data.ingredients[0],
+                        ItemCount: 1
+                    },
+                    {
+                        ...data.ingredients[1],
+                        ItemCount: 100
+                    },
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 100
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/BoltorBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    {
+                        ...data.ingredients[1],
+                        ItemCount: 500
+                    },
+                    data.ingredients[2],
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 100
+                    }
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/BoltoBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    {
+                        ItemType: "/Lotus/Types/Items/MiscItems/AlloyPlate",
+                        ItemCount: 300
+                    },
+                    {
+                        ...data.ingredients[2],
+                        ItemCount: 1
+                    },
+                    data.ingredients[3]
+                ]
+            };
+        } else if (uniqueName == "/Lotus/Types/Recipes/Weapons/AxeBlueprint") {
+            data = {
+                ...data,
+                ingredients: [
+                    data.ingredients[0],
+                    data.ingredients[1],
+                    {
+                        ...data.ingredients[2],
+                        ItemType: "/Lotus/Types/Items/MiscItems/Rubedo"
+                    },
+                    {
+                        ...data.ingredients[3],
+                        ItemCount: 80
+                    }
+                ]
+            };
+        }
+    }
+
+    if (uniqueName.startsWith("/Lotus/StoreItems/Types/Recipes/EidolonRecipes/Arcanes/")) {
+        if (version_compare(buildLabel, gameToBuildVersion["22.2.4"]) >= 0) {
+            const wdata = structuredClone(data) as Mutable<IRecipe>;
+            if (uniqueName.endsWith("ArmourOnOperatorModeBlueprint")) {
+                wdata.ingredients[0].ItemCount = 20;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/Cryotic",
+                    ItemCount: 7100
+                };
+            } else if (uniqueName.endsWith("AttackSpeedOnKillBlueprint")) {
+                wdata.ingredients[0].ItemCount = 20;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/Plastids",
+                    ItemCount: 3500
+                };
+            } else if (uniqueName.endsWith("CriticalChanceOnHeadshotBlueprint")) {
+                wdata.ingredients[0].ItemCount = 3;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/Rubedo",
+                    ItemCount: 5200
+                };
+            } else if (uniqueName.endsWith("HealOnTransferenceInBlueprint")) {
+                wdata.ingredients[0].ItemCount = 3;
+                wdata.ingredients[1].ItemCount = 3;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/OxiumAlloy",
+                    ItemCount: 2300
+                };
+            } else if (uniqueName.endsWith("HealOnTransferenceOutBlueprint")) {
+                wdata.ingredients[0].ItemCount = 3;
+                wdata.ingredients[1].ItemCount = 3;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/PolymerBundle",
+                    ItemCount: 8700
+                };
+            } else if (uniqueName.endsWith("HealOnVoidDashBlueprint")) {
+                wdata.ingredients[0].ItemCount = 3;
+                wdata.ingredients[1].ItemCount = 3;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/Salvage",
+                    ItemCount: 9200
+                };
+            } else if (uniqueName.endsWith("HealthOnOperatorModeBlueprint")) {
+                wdata.ingredients[0].ItemCount = 20;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/AlloyPlate",
+                    ItemCount: 6400
+                };
+            } else if (uniqueName.endsWith("ImmunityFallDamageOnVoidDashBlueprint")) {
+                wdata.ingredients[0].ItemCount = 3;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/Ferrite",
+                    ItemCount: 7600
+                };
+            } else if (uniqueName.endsWith("IncreasedCriticalDamageOnCriticalStrikeBlueprint")) {
+                wdata.ingredients[0].ItemCount = 3;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/Circuits",
+                    ItemCount: 4400
+                };
+            } else if (uniqueName.endsWith("IncreasedDamageOnStatusProcBlueprint")) {
+                wdata.ingredients[0].ItemCount = 3;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/Rubedo",
+                    ItemCount: 4100
+                };
+            } else if (uniqueName.endsWith("OperatorAmmoRegenOnKillBlueprint")) {
+                wdata.ingredients[0].ItemCount = 20;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/Circuits",
+                    ItemCount: 3200
+                };
+            } else if (uniqueName.endsWith("SpeedOnVoidDashBlueprint")) {
+                wdata.ingredients[0].ItemCount = 3;
+                wdata.ingredients[1].ItemCount = 3;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/Nanospores",
+                    ItemCount: 8100
+                };
+            } else if (uniqueName.endsWith("StatusChanceOnHeadshotBlueprint")) {
+                wdata.ingredients[0].ItemCount = 3;
+                wdata.ingredients[3] = {
+                    ItemType: "/Lotus/Types/Items/MiscItems/Plastids",
+                    ItemCount: 4800
+                };
+            } else if (
+                uniqueName.endsWith("ChannelKillEnergyRateBlueprint") ||
+                uniqueName.endsWith("CritChannelingDamageBlueprint")
+            ) {
+                wdata.ingredients[0].ItemCount = 10;
+            } else if (
+                uniqueName.endsWith("FinisherLifestealBlueprint") ||
+                uniqueName.endsWith("GroundSlamPullBlueprint") ||
+                uniqueName.endsWith("StatusChannelingDamageBlueprint") ||
+                uniqueName.endsWith("StatusTriggerRadialDamageBlueprint")
+            ) {
+                wdata.ingredients[0].ItemCount = 10;
+                wdata.ingredients[2].ItemCount = 5;
+            }
+            data = wdata;
+        }
+        if (version_compare(buildLabel, "2017.12.08.15.29") >= 0) {
+            // Should be 22.3.4 - 2017-11-16
+            if (
+                uniqueName.endsWith("ArmourOnOperatorModeBlueprint") ||
+                uniqueName.endsWith("HealOnTransferenceInBlueprint")
+            ) {
+                data.ingredients[3].ItemCount = data.ingredients[3].ItemCount / 10;
+            }
+        }
+    }
+    return data;
+};
+
+export const getSyndicate = async (tag: string, buildLabel: string): Promise<ISyndicate | undefined> => {
+    if (
+        version_compare(buildLabel, gameToBuildVersion["37.0.0"]) < 0 ||
+        (version_compare(buildLabel, gameToBuildVersion["41.0.0"]) < 0 && tag == "EntratiSyndicate")
+    ) {
+        const target = `ExportSyndicates/${tag}`;
+        const version = await getLegacyDataVersion(target, buildLabel);
+        if (version) {
+            const legacyData = await getLegacySyndicateData(target, version);
+            return legacyData;
+        }
+    }
+    return ExportSyndicates[tag];
+};
+
+export const getItemCategoryByUniqueName = (uniqueName: string): string | undefined => {
+    if (uniqueName in ExportCustoms) {
+        return ExportCustoms[uniqueName].productCategory;
+    }
+    if (uniqueName in ExportDrones) {
+        return "Drones";
+    }
+    if (uniqueName in ExportKeys) {
+        return "LevelKeys";
+    }
+    if (uniqueName in ExportGear) {
+        return "Consumables";
+    }
+    if (uniqueName in ExportResources) {
+        return ExportResources[uniqueName].productCategory;
+    }
+    if (uniqueName in ExportSentinels) {
+        return ExportSentinels[uniqueName].productCategory;
+    }
+    if (uniqueName in ExportWarframes) {
+        return ExportWarframes[uniqueName].productCategory;
+    }
+    if (uniqueName in supplementalSuits) {
+        return supplementalSuits[uniqueName].productCategory;
+    }
+    if (uniqueName in ExportWeapons) {
+        return ExportWeapons[uniqueName].productCategory;
+    }
+    if (uniqueName == "/Lotus/Types/Game/SolarRails/BasicSolarRail") {
+        return "SolarRails";
+    }
+    return undefined;
+};
+
+export const getItemName = (uniqueName: string): string | undefined => {
+    if (uniqueName in ExportArcanes) {
+        return ExportArcanes[uniqueName].name;
+    }
+    if (uniqueName in ExportBundles) {
+        return ExportBundles[uniqueName].name;
+    }
+    if (uniqueName in ExportCustoms) {
+        return ExportCustoms[uniqueName].name;
+    }
+    if (uniqueName in ExportDrones) {
+        return ExportDrones[uniqueName].name;
+    }
+    if (uniqueName in ExportKeys) {
+        return ExportKeys[uniqueName].name;
+    }
+    if (uniqueName in supplementalKeys) {
+        return supplementalKeys[uniqueName].name;
+    }
+    if (uniqueName in ExportGear) {
+        return ExportGear[uniqueName].name;
+    }
+    if (uniqueName in ExportResources) {
+        return ExportResources[uniqueName].name;
+    }
+    if (uniqueName in ExportSentinels) {
+        return ExportSentinels[uniqueName].name;
+    }
+    if (uniqueName in ExportWarframes) {
+        return ExportWarframes[uniqueName].name;
+    }
+    if (uniqueName in supplementalSuits) {
+        return supplementalSuits[uniqueName].name;
+    }
+    if (uniqueName in ExportWeapons) {
+        return ExportWeapons[uniqueName].name;
+    }
+    if (uniqueName in ExportRailjackWeapons) {
+        return ExportRailjackWeapons[uniqueName].name;
+    }
+    if (uniqueName in ExportDojoRecipes.colours) {
+        return ExportDojoRecipes.colours[uniqueName].name;
+    }
+    if (uniqueName in ExportDojoRecipes.backdrops) {
+        return ExportDojoRecipes.backdrops[uniqueName].name;
+    }
+    if (uniqueName in ExportDojoRecipes.decos) {
+        return ExportDojoRecipes.decos[uniqueName].name;
+    }
+    if (uniqueName in supplementalItemNames) {
+        return supplementalItemNames[uniqueName];
+    }
+    return undefined;
+};
+
+const dicts: Record<string, Record<string, string>> = {
+    de: { ...dict_de, ...dict_de_supp },
+    es: { ...dict_es, ...dict_es_supp },
+    fr: { ...dict_fr, ...dict_fr_supp },
+    it: { ...dict_it, ...dict_it_supp },
+    ja: { ...dict_ja, ...dict_ja_supp },
+    ko: { ...dict_ko, ...dict_ko_supp },
+    pl: { ...dict_pl, ...dict_pl_supp },
+    pt: { ...dict_pt, ...dict_pt_supp },
+    ru: { ...dict_ru, ...dict_ru_supp },
+    tc: { ...dict_tc, ...dict_tc_supp },
+    th: { ...dict_th, ...dict_th_supp },
+    tr: { ...dict_tr, ...dict_tr_supp },
+    uk: { ...dict_uk, ...dict_uk_supp },
+    zh: { ...dict_zh, ...dict_zh_supp },
+    en: { ...dict_en, ...dict_en_supp }
+} as const;
+
+export const getDict = (lang: string): Record<string, string> => {
+    return dicts[lang] ?? dicts.en;
+};
+
+export const getString = (key: string, dict: Record<string, string>): string => {
+    return dict[key] ?? key;
+};
+
+export const getNormalizedString = (key: string, dict: Record<string, string>): string => {
+    return getString(key, dict).replaceAll("‘", "'").replaceAll("’", "'").replaceAll("\r\n", " ");
+};
+
+export const getKeyChainItems = ({ KeyChain, ChainStage }: IKeyChainRequest, buildLabel: string): readonly string[] => {
+    const chainStages = getKey(KeyChain, buildLabel)?.chainStages;
+    if (!chainStages) {
+        throw new Error(`KeyChain ${KeyChain} does not contain chain stages`);
+    }
+
+    const keyChainStage = chainStages[ChainStage];
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (!keyChainStage) {
+        throw new Error(`KeyChainStage ${ChainStage} not found`);
+    }
+
+    if (keyChainStage.itemsToGiveWhenTriggered.length === 0) {
+        throw new Error(
+            `client requested key chain items in KeyChain ${KeyChain} at stage ${ChainStage}, but they did not exist`
+        );
+    }
+
+    return keyChainStage.itemsToGiveWhenTriggered;
+};
+
+export const getLevelKeyRewards = (
+    levelKey: string,
+    buildLabel: string
+): { levelKeyRewards?: IMissionReward; levelKeyRewards2?: readonly TReward[]; levelMission?: Partial<IRegion> } => {
+    const key = getKey(levelKey, buildLabel);
+
+    const levelKeyRewards = key?.missionReward;
+    let levelKeyRewards2 = key?.rewards;
+    const levelMission = key?.mission;
+
+    if (!levelKeyRewards && !levelKeyRewards2 && !levelMission) {
+        logger.warn(
+            `Could not find any reward information for ${levelKey}, gonna have to potentially short-change you`
+        );
+    }
+
+    if (version_compare(buildLabel, gameToBuildVersion["40.0.0"]) < 0) {
+        if (levelKey in vorsPrizePreU40Rewards) {
+            levelKeyRewards2 = vorsPrizePreU40Rewards[levelKey as keyof typeof vorsPrizePreU40Rewards] as TReward[];
+        } else {
+            // Before U19 (Hotfix: Specters of the Rail 0.12, 2016-07-20), The New Strange gave Chroma component blueprints more directly.
+            if (version_compare(buildLabel, "2016.07.20.00.00") < 0) {
+                if (levelKey == "/Lotus/Types/Keys/DragonQuest/DragonQuestMissionTwo") {
+                    levelKeyRewards2 = [
+                        {
+                            rewardType: "RT_STORE_ITEM",
+                            itemType: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/ChromaHelmetBlueprint"
+                        }
+                    ];
+                } else if (levelKey == "/Lotus/Types/Keys/DragonQuest/DragonQuestMissionThree") {
+                    levelKeyRewards2 = [
+                        {
+                            rewardType: "RT_STORE_ITEM",
+                            itemType: "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/ChromaSystemsBlueprint"
+                        }
+                    ];
+                }
+            }
+        }
+    }
+
+    return {
+        levelKeyRewards,
+        levelKeyRewards2,
+        levelMission
+    };
+};
+
+export const getKeyChainMessage = ({ KeyChain, ChainStage }: IKeyChainRequest, buildLabel: string): IMessage => {
+    const chainStages = getKey(KeyChain, buildLabel)?.chainStages;
+    if (!chainStages) {
+        throw new Error(`KeyChain ${KeyChain} does not contain chain stages`);
+    }
+
+    let i = ChainStage;
+    let chainStageMessage = chainStages[i].messageToSendWhenTriggered;
+    while (!chainStageMessage) {
+        if (++i >= chainStages.length) {
+            break;
+        }
+        chainStageMessage = chainStages[i].messageToSendWhenTriggered;
+    }
+
+    if (!chainStageMessage) {
+        throw new Error(
+            `client requested key chain message in keychain ${KeyChain} at stage ${ChainStage} but they did not exist`
+        );
+    }
+    return convertInboxMessage(chainStageMessage);
+};
+
+export const convertInboxMessage = (message: IInboxMessage): IMessage => {
+    return {
+        sndr: message.sender,
+        msg: message.body,
+        cinematic: message.cinematic,
+        sub: message.title,
+        customData: message.customData,
+        att: message.attachments.length > 0 ? message.attachments : undefined,
+        countedAtt: message.countedAttachments.length > 0 ? message.countedAttachments : undefined,
+        icon: message.icon ?? "",
+        transmission: message.transmission ?? "",
+        highPriority: message.highPriority ?? false,
+        r: false
+    } satisfies IMessage;
+};
+
+export const isStoreItem = (type: string): boolean => {
+    return type.startsWith("/Lotus/StoreItems/") || type in ExportBoosters;
+};
+
+export const toStoreItem = (type: string): string => {
+    if (type.startsWith("/Lotus/Types/Boosters/")) {
+        const boosterEntry = Object.entries(ExportBoosters).find(arr => arr[1].typeName == type);
+        if (boosterEntry) {
+            return boosterEntry[0];
+        }
+        throw new Error(`could not convert ${type} to a store item`);
+    }
+    return "/Lotus/StoreItems/" + type.substring("/Lotus/".length);
+};
+
+export const fromStoreItem = (type: string): string => {
+    if (type.startsWith("/Lotus/StoreItems/")) {
+        return "/Lotus/" + type.substring("/Lotus/StoreItems/".length);
+    }
+
+    if (type in ExportBoosters) {
+        return ExportBoosters[type].typeName;
+    }
+
+    throw new Error(`${type} is not a store item`);
+};
+
+export const getDefaultUpgrades = (parts: string[]): IDefaultUpgrade[] | undefined => {
+    const allDefaultUpgrades: IDefaultUpgrade[] = [];
+    for (const part of parts) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        const defaultUpgrades = ExportWeapons[part]?.defaultUpgrades;
+        if (defaultUpgrades) {
+            allDefaultUpgrades.push(...defaultUpgrades);
+        }
+    }
+    return allDefaultUpgrades.length == 0 ? undefined : allDefaultUpgrades;
+};
+
+export const getMaxLevelCap = (type: string): number => {
+    if (type in ExportWarframes) {
+        return ExportWarframes[type].maxLevelCap ?? 30;
+    }
+    if (type in ExportWeapons) {
+        return ExportWeapons[type].maxLevelCap ?? 30;
+    }
+    return 30;
+};
+
+export const getProductCategory = (uniqueName: string): string => {
+    if (uniqueName in ExportCustoms) {
+        return ExportCustoms[uniqueName].productCategory;
+    }
+    if (uniqueName in ExportGear) {
+        return "Consumables";
+    }
+    if (uniqueName in ExportResources) {
+        return ExportResources[uniqueName].productCategory;
+    }
+    if (uniqueName in ExportWeapons) {
+        return ExportWeapons[uniqueName].productCategory;
+    }
+    throw new Error(`don't know product category of ${uniqueName}`);
+};
+
+export const getBundle = (uniqueName: string, buildLabel: string): IBundle | undefined => {
+    if (
+        uniqueName == "/Lotus/Types/StoreItems/Packages/StalkerPack" &&
+        version_compare(buildLabel, "2024.06.12.18.42") < 0 // < 36.0.0
+    ) {
+        return {
+            name: "/Lotus/Language/Items/StalkerPackName",
+            description: "/Lotus/Language/Items/StalkerPackDesc",
+            icon: "/Lotus/Interface/Icons/StoreIcons/MarketBundles/Weapons/StalkerPack.png",
+            components: [
+                { typeName: "/Lotus/StoreItems/Weapons/Tenno/Bows/StalkerBow", purchaseQuantity: 1 },
+                { typeName: "/Lotus/StoreItems/Weapons/Tenno/ThrowingWeapons/StalkerKunai", purchaseQuantity: 1 },
+                {
+                    typeName: "/Lotus/StoreItems/Weapons/Tenno/Melee/Scythe/StalkerScytheWeapon",
+                    purchaseQuantity: 1
+                },
+                {
+                    typeName: "/Lotus/StoreItems/Types/StoreItems/SuitCustomizations/NinjaColourPickerItem",
+                    purchaseQuantity: 1
+                }
+            ],
+            packageDiscount: 0.059
+        };
+    }
+
+    return ExportBundles[uniqueName];
+};
+
+export const getBoosterPack = async (
+    uniqueName: string,
+    buildLabel: string = ""
+): Promise<IBoosterPack | undefined> => {
+    if (
+        version_compare(buildLabel, gameToBuildVersion["18.16.0"]) < 0 &&
+        uniqueName == "/Lotus/Types/BoosterPacks/RandomKey"
+    ) {
+        const boosterPack: Mutable<IBoosterPack> = {
+            name: "/Lotus/Language/Items/RandomKey",
+            description: "/Lotus/Language/Items/RandomKeyDesc",
+            icon: "/Lotus/Interface/Icons/Store/OrokinKey.png",
+            components: [
+                { Item: "/Lotus/Types/Keys/OrokinKeyA", Rarity: "COMMON", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinKeyB", Rarity: "COMMON", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinKeyC", Rarity: "UNCOMMON", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinKeyD", Rarity: "UNCOMMON", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinKeyE", Rarity: "RARE", Amount: 1 }
+            ],
+            rarityWeightsPerRoll: [
+                { COMMON: 1, UNCOMMON: 0.05, RARE: 0.01, LEGENDARY: 0 },
+                { COMMON: 1, UNCOMMON: 0.25, RARE: 0.05, LEGENDARY: 0 },
+                { COMMON: 1, UNCOMMON: 0.25, RARE: 0.05, LEGENDARY: 0 },
+                { COMMON: 1, UNCOMMON: 0.25, RARE: 0.05, LEGENDARY: 0 },
+                { COMMON: 1, UNCOMMON: 0.25, RARE: 0.1, LEGENDARY: 0 }
+            ],
+            canGiveDuplicates: true,
+            platinumCost: 75
+        };
+        if (version_compare(buildLabel, "2013.06.07.23.44") >= 0) {
+            boosterPack.rarityWeightsPerRoll[4] = { COMMON: 0, UNCOMMON: 0, RARE: 1, LEGENDARY: 0 };
+        }
+        if (version_compare(buildLabel, gameToBuildVersion["9.1.0"]) >= 0) {
+            boosterPack.components.push(
+                { Item: "/Lotus/Types/Keys/OrokinCaptureKeyA", Rarity: "COMMON", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinCaptureKeyB", Rarity: "COMMON", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinCaptureKeyC", Rarity: "RARE", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinMobileDefenseKeyA", Rarity: "COMMON", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinMobileDefenseKeyB", Rarity: "UNCOMMON", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinMobileDefenseKeyC", Rarity: "RARE", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinDefenseKeyA", Rarity: "COMMON", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinDefenseKeyB", Rarity: "UNCOMMON", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinDefenseKeyC", Rarity: "RARE", Amount: 1 }
+            );
+        }
+        if (version_compare(buildLabel, gameToBuildVersion["10.3.3"]) >= 0) {
+            boosterPack.components.push({
+                Item: "/Lotus/Types/Keys/OrokinTowerSurvivalT3Key",
+                Rarity: "UNCOMMON",
+                Amount: 1
+            });
+        }
+        if (version_compare(buildLabel, gameToBuildVersion["14.0.0"]) >= 0) {
+            boosterPack.components.find(c => c.Item === "/Lotus/Types/Keys/OrokinTowerSurvivalT3Key")!.Rarity = "RARE";
+            boosterPack.components.push(
+                { Item: "/Lotus/Types/Keys/OrokinTowerKeys/OrokinTowerCaptureTier4Key", Rarity: "RARE", Amount: 1 },
+                { Item: "/Lotus/Types/Keys/OrokinTowerKeys/OrokinTowerDefenseTier4Key", Rarity: "RARE", Amount: 1 },
+                {
+                    Item: "/Lotus/Types/Keys/OrokinTowerKeys/OrokinTowerExterminateTier4Key",
+                    Rarity: "RARE",
+                    Amount: 1
+                },
+                {
+                    Item: "/Lotus/Types/Keys/OrokinTowerKeys/OrokinTowerInterceptionTier4Key",
+                    Rarity: "RARE",
+                    Amount: 1
+                },
+                {
+                    Item: "/Lotus/Types/Keys/OrokinTowerKeys/OrokinTowerMobileDefenseTier4Key",
+                    Rarity: "RARE",
+                    Amount: 1
+                },
+                { Item: "/Lotus/Types/Keys/OrokinTowerKeys/OrokinTowerSurvivalTier4Key", Rarity: "RARE", Amount: 1 }
+            );
+        }
+        if (version_compare(buildLabel, gameToBuildVersion["15.0.6"]) >= 0) {
+            boosterPack.components.push(
+                {
+                    Item: "/Lotus/Types/Keys/OrokinTowerKeys/OrokinTowerSabotageTier1Key",
+                    Rarity: "COMMON",
+                    Amount: 1
+                },
+                {
+                    Item: "/Lotus/Types/Keys/OrokinTowerKeys/OrokinTowerSabotageTier2Key",
+                    Rarity: "UNCOMMON",
+                    Amount: 1
+                },
+                {
+                    Item: "/Lotus/Types/Keys/OrokinTowerKeys/OrokinTowerSabotageTier3Key",
+                    Rarity: "RARE",
+                    Amount: 1
+                },
+                { Item: "/Lotus/Types/Keys/OrokinTowerKeys/OrokinTowerSabotageTier4Key", Rarity: "RARE", Amount: 1 }
+            );
+        }
+        return boosterPack;
+    }
+    if (version_compare(buildLabel, gameToBuildVersion["18.18.0"]) < 0) {
+        if (
+            [
+                "/Lotus/Types/BoosterPacks/CommonFusionPack",
+                "/Lotus/Types/BoosterPacks/PremiumUncommonFusionPack",
+                "/Lotus/Types/BoosterPacks/PremiumRareFusionPack"
+            ].includes(uniqueName)
+        ) {
+            return {
+                ...ExportBoosterPacks[uniqueName],
+                components: [
+                    { Item: "/Lotus/Upgrades/Mods/Fusers/CommonModFuser", Rarity: "COMMON", Amount: 1 },
+                    { Item: "/Lotus/Upgrades/Mods/Fusers/UncommonModFuser", Rarity: "UNCOMMON", Amount: 1 },
+                    { Item: "/Lotus/Upgrades/Mods/Fusers/RareModFuser", Rarity: "RARE", Amount: 1 }
+                ]
+            };
+        }
+    }
+    if (
+        [
+            "/Lotus/Types/BoosterPacks/RandomProjection",
+            "/Lotus/Types/BoosterPacks/LoginRewardRandomProjection",
+            "/Lotus/Types/BoosterPacks/RandomSyndicateProjectionPack",
+            "/Lotus/Types/BoosterPacks/GreaterRandomProjection"
+        ].includes(uniqueName)
+    ) {
+        return {
+            ...ExportBoosterPacks[uniqueName],
+            ...getLegacyRandomProjectionData(buildLabel)
+        };
+    }
+    if (
+        [
+            "/Lotus/Types/BoosterPacks/CommonArtifactPack", // 30p
+            "/Lotus/Types/BoosterPacks/UncommonArtifactPack", // 45p
+            "/Lotus/Types/BoosterPacks/RareArtifactPack", // 60p
+            "/Lotus/Types/BoosterPacks/PremiumUncommonArtifactPack", // 75p
+            "/Lotus/Types/BoosterPacks/PremiumRareArtifactPack" // 90p
+        ].includes(uniqueName)
+    ) {
+        // Mod packs retired in U25
+        if (version_compare(buildLabel, gameToBuildVersion["25.0.0"]) < 0) {
+            const target = "LotusArtifactUpgradePackBase";
+            const version = await getLegacyDataVersion(target, buildLabel);
+            if (version) {
+                const legacyData = await getLegacyBoosterPackData(target, version);
+                return {
+                    ...ExportBoosterPacks[uniqueName],
+                    ...legacyData
+                };
+            }
+        }
+    }
+
+    return ExportBoosterPacks[uniqueName];
+};
+
+export const getKey = (uniqueName: string, buildLabel: string = BL_LATEST): IKey | undefined => {
+    if (uniqueName == "/Lotus/Types/Keys/DragonQuest/DragonQuestKeyChain") {
+        // Before U19 (Hotfix: Specters of the Rail 0.12, 2016-07-20), The New Strange gave Chroma component blueprints more directly.
+        if (version_compare(buildLabel, "2016.07.20.00.00") < 0) {
+            const latestData = ExportKeys[uniqueName];
+            return {
+                ...latestData,
+                chainStages: latestData.chainStages!.map(chainStage => {
+                    if ("itemsToGiveWhenTriggered" in chainStage && chainStage.itemsToGiveWhenTriggered.length == 1) {
+                        if (
+                            chainStage.itemsToGiveWhenTriggered[0] ==
+                            "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/ChromaBeaconABlueprint"
+                        ) {
+                            return {
+                                itemsToGiveWhenTriggered: [
+                                    "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/ChromaChassisBlueprint"
+                                ]
+                            };
+                        } else if (
+                            chainStage.itemsToGiveWhenTriggered[0] ==
+                                "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/ChromaBeaconBBlueprint" ||
+                            chainStage.itemsToGiveWhenTriggered[0] ==
+                                "/Lotus/StoreItems/Types/Recipes/WarframeRecipes/ChromaBeaconCBlueprint"
+                        ) {
+                            return {
+                                itemsToGiveWhenTriggered: []
+                            };
+                        }
+                    }
+                    return chainStage;
+                })
+            };
+        }
+    } else if (uniqueName == "/Lotus/Types/Keys/InfestedIntroQuest/InfestedIntroQuestKeyChain") {
+        if (version_compare(buildLabel, gameToBuildVersion["37.0.0"]) < 0) {
+            const latestData = ExportKeys[uniqueName];
+            return {
+                ...latestData,
+                chainStages: [
+                    latestData.chainStages![0],
+                    latestData.chainStages![1],
+                    latestData.chainStages![2],
+                    latestData.chainStages![3],
+                    latestData.chainStages![4],
+                    {
+                        itemsToGiveWhenTriggered: [],
+                        messageToSendWhenTriggered: {
+                            sender: "/Lotus/Language/Menu/Mailbox_WarframeSender",
+                            title: "/Lotus/Language/G1Quests/IIQCompleteMessageTitle",
+                            body: "/Lotus/Language/G1Quests/IIQCompleteMessageBody",
+                            attachments: [],
+                            countedAttachments: []
+                        }
+                    },
+                    latestData.chainStages![5]
+                ]
+            };
+        }
+    } else if (uniqueName == "/Lotus/Types/Keys/ArchwingQuest/ArchwingQuestKeyChain") {
+        if (version_compare(buildLabel, gameToBuildVersion["18.5.0"]) < 0) {
+            const latestData = ExportKeys[uniqueName];
+            return {
+                ...latestData,
+                chainStages: [
+                    latestData.chainStages![0], // Give BP
+                    latestData.chainStages![1], // Mission 1
+                    latestData.chainStages![2], // Mission 2
+                    {
+                        itemsToGiveWhenTriggered: []
+                    },
+                    {
+                        itemsToGiveWhenTriggered: []
+                    },
+                    {
+                        itemsToGiveWhenTriggered: [
+                            "/Lotus/StoreItems/Weapons/Tenno/Archwing/Primary/FoldingMachineGun/ArchMachineGun",
+                            "/Lotus/StoreItems/Weapons/Tenno/Archwing/Melee/Archsword/ArchSwordWeapon"
+                        ]
+                    },
+                    {
+                        itemsToGiveWhenTriggered: []
+                    },
+                    latestData.chainStages![4], // Mission 4
+                    {
+                        itemsToGiveWhenTriggered: []
+                    }
+                ]
+            };
+        }
+    }
+
+    return ExportKeys[uniqueName] ?? supplementalKeys[uniqueName];
+};
+
+export const getMissionDeck = (uniqueName: string, buildLabel: string): Readonly<TMissionDeck> | undefined => {
+    if (
+        uniqueName == "/Lotus/Types/Game/MissionDecks/BossMissionRewards/YinYangRewards" &&
+        !shouldDoServerQol("tylRegorDropsTwoEquinoxParts", buildLabel, gameToBuildVersion["42.0.0"])
+    ) {
+        return preU42YinYangRewards;
+    }
+    if (version_compare(buildLabel, gameToBuildVersion["26.0.0"]) < 0 && uniqueName in preU26SpyMissionDecks) {
+        return preU26SpyMissionDecks[uniqueName];
+    }
+    return ExportRewards[uniqueName];
+};
+
+export const getPowerSuit = (uniqueName: string): IPowersuit | undefined => {
+    return ExportWarframes[uniqueName] ?? supplementalSuits[uniqueName];
+};
+
+const u7WeaponCosts: Record<string, number> = {
+    "/Lotus/Weapons/Tenno/Pistol/HeavyPistol": 35_000,
+    "/Lotus/Weapons/Tenno/Akimbo/AkimboPistol": 12_000,
+    "/Lotus/Weapons/Tenno/Pistol/AutoPistol": 15_000,
+    "/Lotus/Weapons/Tenno/Pistol/HandShotGun": 35_000,
+    "/Lotus/Weapons/Tenno/Pistol/Pistol": 4_000,
+    "/Lotus/Weapons/Tenno/Pistol/BurstPistol": 12_000,
+    "/Lotus/Weapons/Tenno/Rifle/BurstRifle": 12_000,
+    "/Lotus/Weapons/Tenno/Rifle/StartingRifle": 8_000,
+    "/Lotus/Weapons/Tenno/Rifle/HeavyRifle": 50_000,
+    "/Lotus/Weapons/Tenno/Rifle/SemiAutoRifle": 50_000,
+    "/Lotus/Weapons/Tenno/Shotgun/FullAutoShotgun": 50_000,
+    "/Lotus/Weapons/Tenno/Rifle/SniperRifle": 50_000,
+    "/Lotus/Weapons/Tenno/Rifle/Rifle": 10_000,
+    "/Lotus/Weapons/Tenno/Shotgun/Shotgun": 17_500,
+    "/Lotus/Weapons/Tenno/Melee/LongSword/LongSword": 15_000,
+    "/Lotus/Weapons/Tenno/Melee/Fist/Fist": 30_000,
+    "/Lotus/Weapons/Tenno/Melee/DualShortSword/DualShortSword": 45_000,
+    "/Lotus/Weapons/Tenno/Melee/Staff/Staff": 15_000
+};
+
+export const slotPurchaseData: Record<string, { bin: TInventorySlot; price: number | undefined; amount: number }> = {
+    SuitSlotItem: { bin: "SuitBin", price: 20, amount: 1 },
+    TwoSentinelSlotItem: { bin: "SentinelBin", price: 12, amount: 2 },
+    WeaponSlotItem: { bin: "WeaponBin", price: undefined, amount: 1 },
+    TwoWeaponSlotItem: { bin: "WeaponBin", price: 12, amount: 2 },
+    SpaceSuitSlotItem: { bin: "SpaceSuitBin", price: 12, amount: 1 },
+    TwoSpaceWeaponSlotItem: { bin: "SpaceWeaponBin", price: 12, amount: 2 },
+    MechSlotItem: { bin: "MechBin", price: 20, amount: 1 },
+    TwoOperatorWeaponSlotItem: { bin: "OperatorAmpBin", price: 12, amount: 2 },
+    RandomModSlotItem: { bin: "RandomModBin", price: 60, amount: 3 },
+    TwoCrewShipSalvageSlotItem: { bin: "CrewShipSalvageBin", price: 12, amount: 2 },
+    CrewMemberSlotItem: { bin: "CrewMemberBin", price: 20, amount: 1 },
+    PvPLoadoutSlotItem: { bin: "PvpBonusLoadoutBin", price: undefined, amount: 1 },
+    KubrowSlotItem: { bin: "PetBin", price: 10, amount: 1 }
+};
+
+export const getPrice = (
+    storeItemName: string,
+    quantity: number = 1,
+    durability: number = 0,
+    usePremium: boolean,
+    buildLabel: string
+): number => {
+    const isBundle = storeItemName in ExportBundles;
+    let internalName = isBundle ? storeItemName : fromStoreItem(storeItemName);
+
+    {
+        const { FlashSales } = getWorldState(buildLabel);
+        const flashSale = FlashSales.find(s => s.TypeName == internalName);
+        if (flashSale) {
+            if (usePremium && flashSale.PremiumOverride) {
+                return flashSale.PremiumOverride * quantity;
+            } else if (!usePremium && flashSale.RegularOverride) {
+                return flashSale.RegularOverride * quantity;
+            }
+        }
+    }
+
+    if (storeItemName in ExportBoosters) {
+        return 40 * (durability + 1);
+    }
+
+    if (!usePremium && version_compare(buildLabel, gameToBuildVersion["8.0.0"]) < 0 && internalName in u7WeaponCosts) {
+        return u7WeaponCosts[internalName];
+    }
+
+    if (usePremium) {
+        const internalNameShort = internalName.substring(internalName.lastIndexOf("/") + 1);
+        if (internalNameShort in slotPurchaseData && slotPurchaseData[internalNameShort].price !== undefined) {
+            return slotPurchaseData[internalNameShort].price;
+        }
+    }
+
+    // Hardcoded sale in this version
+    if (
+        usePremium &&
+        buildLabel == "2014.05.23.12.12/" &&
+        storeItemName == "/Lotus/StoreItems/Types/Sentinels/SentinelPowersuits/CarrierPowerSuit"
+    ) {
+        return 60;
+    }
+
+    let price: number | undefined;
+    if (isBundle) {
+        const bundle = getBundle(storeItemName, buildLabel)!;
+        if (usePremium && bundle.platinumCost) {
+            price = ExportBundles[storeItemName].platinumCost;
+        } else if (!usePremium && bundle.creditsCost) {
+            price = ExportBundles[storeItemName].creditsCost;
+        } else {
+            let sum = 0;
+            for (const component of bundle.components) {
+                sum += getPrice(
+                    component.typeName,
+                    component.purchaseQuantity,
+                    [3, 7, 30, 90].indexOf(component.durabilityDays ?? 3),
+                    usePremium,
+                    buildLabel
+                );
+            }
+            const discount = typeof bundle.packageDiscount === "number" ? bundle.packageDiscount : 0.25;
+            price = Math.round(sum * (1 - discount));
+        }
+    } else if (internalName in ExportBoosterPacks) {
+        if (usePremium) price = ExportBoosterPacks[internalName].platinumCost;
+    } else {
+        // https://onlyg.it/OpenWF/SpaceNinjaServer/issues/3941
+        if (internalName.endsWith("LeftArmor")) {
+            internalName = internalName.substring(0, internalName.length - "LeftArmor".length) + "Armor";
+        }
+
+        const categories = [
+            ExportBundles,
+            ExportCreditBundles,
+            ExportCustoms,
+            ExportFlavour,
+            ExportGear,
+            ExportRecipes,
+            ExportResources,
+            ExportSentinels,
+            ExportWarframes,
+            ExportWeapons
+        ];
+        const category = categories.find(c => internalName in c);
+        if (category) {
+            const item = category[internalName];
+            if (usePremium && "platinumCost" in item) {
+                price = item.platinumCost;
+            } else if (!usePremium && "creditsCost" in item) {
+                price = item.creditsCost;
+            }
+        } else {
+            const recipe = getRecipe(internalName, buildLabel);
+            if (recipe) {
+                if (usePremium && "platinumCost" in recipe) {
+                    price = recipe.platinumCost;
+                } else if (!usePremium && "creditsCost" in recipe) {
+                    price = recipe.creditsCost;
+                }
+            }
+        }
+
+        if (usePremium) {
+            if (version_compare(buildLabel, gameToBuildVersion["18.16.0"]) < 0) {
+                if (internalName == "/Lotus/Powersuits/Mag/Mag") {
+                    price = ExportWarframes["/Lotus/Powersuits/Loki/Loki"].platinumCost;
+                } else if (internalName == "/Lotus/Powersuits/Loki/Loki") {
+                    price = ExportWarframes["/Lotus/Powersuits/Mag/Mag"].platinumCost;
+                }
+            }
+            if (version_compare(buildLabel, gameToBuildVersion["18.0.2"]) < 0) {
+                if (internalName == "/Lotus/Upgrades/Skins/Dragon/DragonAltHelmet") price = 40;
+            }
+        } else {
+            // I'm not sure when they stopped selling it
+            if (storeItemName == "/Lotus/StoreItems/Types/Restoratives/Cipher") price = 250;
+        }
+    }
+
+    if (price == undefined) {
+        throw new Error(`no price found for ${storeItemName}`);
+    }
+
+    return price * quantity;
+};
+
+export const getRegion = async (uniqueName: string, buildLabel: string): Promise<IRegion | undefined> => {
+    const regions = await getRegions(buildLabel);
+    return regions[uniqueName];
+};
+
+export const getRegions = async (buildLabel: string): Promise<Record<string, IRegion>> => {
+    // after U27.2.0 OriginSolarMapRedux moved to binary format, so we don't have data for it
+    if (version_compare(buildLabel, gameToBuildVersion["27.2.0"]) <= 0) {
+        const target =
+            version_compare(buildLabel, gameToBuildVersion["14.0.0"]) < 0
+                ? "SolStarChart"
+                : version_compare(buildLabel, gameToBuildVersion["18.16.0"]) < 0
+                  ? "OriginSolarMap"
+                  : "OriginSolarMapRedux";
+        const version = await getLegacyDataVersion(target, buildLabel);
+        if (version) {
+            return await getLegacySolarMapData(target, version);
+        }
+    }
+    return ExportRegions;
+};
+
+export const isRegionAvailableIn = (key: string, value: IRegion, buildVersion: number): boolean => {
+    // Zeipel, Lua (Rescue)
+    if (buildVersion >= gameToBuildVersionInt["32.2.0"]) {
+        return true;
+    }
+    if (key == "SolNode307") {
+        return false;
+    }
+
+    // Apollo, Lua (Disruption)
+    if (buildVersion >= gameToBuildVersionInt["25.7.0"]) {
+        return true;
+    }
+    if (key == "SolNode308") {
+        return false;
+    }
+
+    // Kuva Fortress
+    if (buildVersion >= gameToBuildVersionInt["19.0.1"]) {
+        return true;
+    }
+    if (value.systemIndex == 18) {
+        return false;
+    }
+
+    return true;
+};
+
+// For prex cards
+export const getShipDecoByNameTag = (name: string): string => {
+    for (const [uniqueName, data] of Object.entries(ExportResources)) {
+        if (data.productCategory == "ShipDecorations" && data.name == name) {
+            return uniqueName;
+        }
+    }
+    throw new Error(`No ship deco with name tag ${name}`);
+};
+
+export const getUpgrade = (uniqueName: string): IUpgrade | undefined => {
+    return ExportUpgrades[uniqueName] ?? supplementalUpgrades[uniqueName];
+};
+
+export const getVendor = (uniqueName: string): IVendor | undefined => {
+    return ExportVendors[uniqueName] ?? supplementalVendors[uniqueName];
+};
+
+export const isModularPartKnownToBuild = (partType: string, buildLabel: string): boolean => {
+    const entry = Object.entries(modularPartIntroductions).find(([prefix]) => partType.startsWith(prefix));
+    return !entry || buildLabelToVersionInt(buildLabel) >= entry[1];
+};

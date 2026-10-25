@@ -11,8 +11,61 @@ import { version_compare } from "../../helpers/inventoryHelpers.ts";
 import gameToBuildVersion from "../../constants/gameToBuildVersion.ts";
 import { logger } from "../../utils/logger.ts";
 
+/**
+ * Warframe 44.x may prepend a small header object to the request body, e.g.
+ * {"ChallengePTS":1791981813,"crossPlaySetting":"ENABLED"}{"PurchaseParams":{...},"buildLabel":"..."}
+ * i.e. two JSON values back to back. Split them and use the one that is the actual purchase request.
+ */
+const splitJsonValues = (text: string): string[] => {
+    const values: string[] = [];
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let start = -1;
+    for (let i = 0; i < text.length; ++i) {
+        const c = text[i];
+        if (inString) {
+            if (escaped) escaped = false;
+            else if (c == "\\") escaped = true;
+            else if (c == '"') inString = false;
+        } else if (c == '"') {
+            inString = true;
+        } else if (c == "{" || c == "[") {
+            if (depth++ == 0) start = i;
+        } else if ((c == "}" || c == "]") && --depth == 0) {
+            values.push(text.substring(start, i + 1));
+        }
+    }
+    if (depth != 0 || inString) throw new SyntaxError("Unbalanced JSON in request body");
+    return values;
+};
+
+const parsePurchaseBody = (text: string): IPurchaseRequest | IPurchaseRequestU16 => {
+    try {
+        return JSON.parse(text) as IPurchaseRequest | IPurchaseRequestU16;
+    } catch (e) {
+        const parts = splitJsonValues(text);
+        if (parts.length < 2) throw e;
+        const objects = parts.map(p => JSON.parse(p) as Record<string, unknown>);
+        const real = objects.find(o => "PurchaseParams" in o || "productName" in o);
+        if (!real) throw e;
+        logger.debug(`purchase.php body had ${parts.length} concatenated JSON values; using the purchase request`);
+        return real as unknown as IPurchaseRequest | IPurchaseRequestU16;
+    }
+};
+
 export const purchasePostController: RequestHandler = async (req, res) => {
-    let purchaseRequest = JSON.parse(String(req.body)) as IPurchaseRequest | IPurchaseRequestU16;
+    const purchaseRequestText = String(req.body);
+    let purchaseRequest: IPurchaseRequest | IPurchaseRequestU16;
+    try {
+        purchaseRequest = parsePurchaseBody(purchaseRequestText);
+    } catch (e) {
+        logger.error(
+            `purchase.php body failed to parse (${purchaseRequestText.length} chars): ${(e as Error).message}\n` +
+                `  text: ${JSON.stringify(purchaseRequestText.slice(0, 1500))}`
+        );
+        throw e;
+    }
     if (!("PurchaseParams" in purchaseRequest)) {
         logger.debug("converting legacy purchase request", purchaseRequest);
         purchaseRequest = {

@@ -6,93 +6,144 @@
     <link rel="stylesheet" href="/webui/libs/bootstrap.min.css" />
     <link rel="stylesheet" href="/webui/style.css" />
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg sticky-top bg-body-tertiary">
-        <div class="container">
-            <button class="navbar-toggler d-lg-none me-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Toggle sidebar">
+<body class="sn-app">
+    <div class="app-rail" aria-hidden="true">
+        <div class="rail-top">◐</div>
+        <div class="rail-item">▣</div>
+        <div class="rail-spacer"></div>
+        <div class="rail-item">◎</div>
+    </div>
+
+    <nav class="navbar app-topbar">
+        <div class="container-fluid px-3 px-lg-4">
+            <button class="navbar-toggler d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Toggle sidebar">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <a class="navbar-brand">OpenWF WebUI</a>
-            <div class="ms-auto nav-item dropdown">
-                <button id="active-lang-name" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"></button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item active" href="#" data-lang="en" onclick="event.preventDefault();setLanguage('en');">English</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="de" onclick="event.preventDefault();setLanguage('de');">Deutsch</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="es" onclick="event.preventDefault();setLanguage('es');">Español</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="fr" onclick="event.preventDefault();setLanguage('fr');">Français</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="it" onclick="event.preventDefault();setLanguage('it');">Italiano</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="ja" onclick="event.preventDefault();setLanguage('ja');">日本語</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="ko" onclick="event.preventDefault();setLanguage('ko');">한국어</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="pl" onclick="event.preventDefault();setLanguage('pl');">Polski</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="pt" onclick="event.preventDefault();setLanguage('pt');">Português</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="ru" onclick="event.preventDefault();setLanguage('ru');">Русский</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="tr" onclick="event.preventDefault();setLanguage('tr');">Türkçe</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="uk" onclick="event.preventDefault();setLanguage('uk');">Українська</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="zh" onclick="event.preventDefault();setLanguage('zh');">简体中文</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="tc" onclick="event.preventDefault();setLanguage('tc');">繁體中文</a></li>
-                    <li><a class="dropdown-item" href="#" data-lang="th" onclick="event.preventDefault();setLanguage('th');">แบบไทย</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item active" href="#" data-loc="theme_dark" data-theme="dark" onclick="event.preventDefault();setTheme('dark');"></a></li>
-                    <li><a class="dropdown-item" href="#" data-loc="theme_light" data-theme="light" onclick="event.preventDefault();setTheme('light');"></a></li>
-                </ul>
+
+            <a class="navbar-brand app-brand d-lg-none">
+                <span class="brand-cube">◆</span>
+                <span class="app-brand-copy"><strong>SpaceNinja</strong><small>Server Control</small></span>
+            </a>
+
+            <div class="top-search-wrap d-none d-md-flex">
+                <span class="top-search-icon">⌕</span>
+                <input id="nav-search" class="top-search" type="search" placeholder="Search navigation" autocomplete="off" oninput="filterNavigation(this.value)" />
+                <span class="top-search-key">Ctrl K</span>
             </div>
-            <div class="nav-item dropdown user-dropdown">
-                <button class="nav-link dropdown-toggle displayname" data-bs-toggle="dropdown" aria-expanded="false"></button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault();doLogout();" data-loc="navbar_logout"></a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault();changeAccountPassword();" data-loc="navbar_changePassword"></a></li>
-                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault();changeAccountEmail();" data-loc="navbar_changeEmail"></a></li>
-                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault();renameAccount();" data-loc="navbar_renameAccount"></a></li>
-                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault();deleteAccount();" data-loc="navbar_deleteAccount"></a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-    <div class="container pt-3 pb-3" id="main-view">
-        <div class="offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar" aria-labelledby="sidebarLabel">
-            <div class="offcanvas-header">
-                <h5 class="offcanvas-title" id="sidebarLabel">OpenWF WebUI</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close"></button>
-            </div>
-            <div class="offcanvas-body">
-                <div class="navbar p-0">
-                    <ul class="navbar-nav justify-content-end">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/webui/inventory" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="navbar_inventory"></a>
+
+            <div class="ms-auto topbar-actions">
+                <div class="nav-item dropdown language-dropdown">
+                    <button id="active-lang-name" class="topbar-icon-button dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Language"></button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item active" href="#" data-lang="en" onclick="event.preventDefault();setLanguage('en');">English</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="de" onclick="event.preventDefault();setLanguage('de');">Deutsch</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="es" onclick="event.preventDefault();setLanguage('es');">Español</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="fr" onclick="event.preventDefault();setLanguage('fr');">Français</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="it" onclick="event.preventDefault();setLanguage('it');">Italiano</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="ja" onclick="event.preventDefault();setLanguage('ja');">日本語</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="ko" onclick="event.preventDefault();setLanguage('ko');">한국어</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="pl" onclick="event.preventDefault();setLanguage('pl');">Polski</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="pt" onclick="event.preventDefault();setLanguage('pt');">Português</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="ru" onclick="event.preventDefault();setLanguage('ru');">Русский</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="tr" onclick="event.preventDefault();setLanguage('tr');">Türkçe</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="uk" onclick="event.preventDefault();setLanguage('uk');">Українська</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="zh" onclick="event.preventDefault();setLanguage('zh');">简体中文</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="tc" onclick="event.preventDefault();setLanguage('tc');">繁體中文</a></li>
+                        <li><a class="dropdown-item" href="#" data-lang="th" onclick="event.preventDefault();setLanguage('th');">แบบไทย</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item active" href="#" data-loc="theme_dark" data-theme="dark" onclick="event.preventDefault();setTheme('dark');"></a></li>
+                        <li><a class="dropdown-item" href="#" data-loc="theme_light" data-theme="light" onclick="event.preventDefault();setTheme('light');"></a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-item dropdown user-dropdown">
+                    <button class="user-menu-button dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="user-avatar"><span id="user-avatar-initial">U</span></span>
+                        <span class="user-name displayname"></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end user-menu-dropdown">
+                        <li class="user-menu-heading">
+                            <span class="user-avatar user-avatar-sm"><span id="user-avatar-menu-initial">U</span></span>
+                            <span><strong class="displayname"></strong><small>SpaceNinja account</small></span>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/webui/mods" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="navbar_mods"></a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/webui/cheats" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="navbar_cheats"></a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/webui/import" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="navbar_import"></a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/webui/clan" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="navbar_guildView"></a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/webui/users" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="admin_users"></a>
-                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault();changeAccountPassword();" data-loc="navbar_changePassword"></a></li>
+                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault();changeAccountEmail();" data-loc="navbar_changeEmail"></a></li>
+                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault();renameAccount();" data-loc="navbar_renameAccount"></a></li>
+                        <li><a class="dropdown-item text-danger" href="#" onclick="event.preventDefault();deleteAccount();" data-loc="navbar_deleteAccount"></a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item logout-item" href="#" onclick="event.preventDefault();doLogout();" data-loc="navbar_logout"></a></li>
                     </ul>
                 </div>
             </div>
         </div>
-        <div id="main-content" class="w-100">
-            <div data-route="/webui/" data-title-tag="login_title">
-                <p data-loc="login_description"></p>
-                <form onsubmit="doLogin();return false;">
-                    <label for="email" data-loc="login_emailLabel"></label>
-                    <input class="form-control" type="text" id="email" required />
-                    <br />
-                    <label for="password" data-loc="login_passwordLabel"></label>
-                    <input class="form-control" type="password" id="password" required />
-                    <br />
-                    <button class="btn btn-primary" type="submit" data-loc="login_loginButton"></button>
-                    <button class="btn btn-secondary" type="submit" onclick="registerSubmit = true;" data-loc="login_registerButton"></button>
-                </form>
+    </nav>
+
+    <div class="container-fluid app-shell" id="main-view">
+        <div class="offcanvas-lg offcanvas-start app-sidebar" tabindex="-1" id="sidebar" aria-labelledby="sidebarLabel">
+            <div class="offcanvas-header sidebar-header">
+                <div class="sidebar-brand" id="sidebarLabel">
+                    <span class="brand-cube">◆</span>
+                    <span><strong>SpaceNinja</strong><small>Server Console</small></span>
+                </div>
+                <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body sidebar-body">
+                <div class="sidebar-section-label">MANAGEMENT</div>
+                <div class="navbar p-0 sidebar-nav-wrap">
+                    <ul class="navbar-nav justify-content-end">
+                        <li class="nav-item"><a class="nav-link" href="/webui/inventory" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="navbar_inventory"></a></li>
+                        <li class="nav-item"><a class="nav-link" href="/webui/mods" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="navbar_mods"></a></li>
+                        <li class="nav-item"><a class="nav-link" href="/webui/cheats" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="navbar_cheats"></a></li>
+                        <li class="nav-item"><a class="nav-link" href="/webui/import" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="navbar_import"></a></li>
+                        <li class="nav-item"><a class="nav-link" href="/webui/clan" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="navbar_guildView"></a></li>
+                        <li class="nav-item"><a class="nav-link" href="/webui/users" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-loc="admin_users"></a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-spacer"></div>
+                <div class="sidebar-help-card">
+                    <strong>Server control</strong>
+                    <p>Manage your account, inventory and server tools from this console.</p>
+                    <span><i></i> Connected</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="main-content" class="w-100 app-content">
+            <header class="content-header">
+                <div>
+                    <p class="content-eyebrow">SPACE NINJA SERVER</p>
+                    <h1 id="page-heading">Dashboard</h1>
+                </div>
+                <div class="server-status-pill"><span class="status-dot"></span>Server online</div>
+            </header>
+            <div data-route="/webui/" data-title-tag="login_title" class="login-route">
+                <div class="login-panel">
+                    <div class="login-brand">
+                        <span class="brand-cube login-cube">◆</span>
+                        <span><strong>SpaceNinja</strong><small>Server Console</small></span>
+                    </div>
+                    <div class="login-copy">
+                        <span class="login-kicker">WELCOME BACK</span>
+                        <h1 data-loc="login_title"></h1>
+                        <p data-loc="login_description"></p>
+                    </div>
+                    <form class="login-form" onsubmit="doLogin();return false;">
+                        <div class="login-field">
+                            <label for="email" data-loc="login_emailLabel"></label>
+                            <input class="form-control" type="text" id="email" autocomplete="username" required />
+                        </div>
+                        <div class="login-field">
+                            <label for="password" data-loc="login_passwordLabel"></label>
+                            <input class="form-control" type="password" id="password" autocomplete="current-password" required />
+                        </div>
+                        <div class="login-actions">
+                            <button class="btn btn-primary" type="submit" data-loc="login_loginButton"></button>
+                            <button class="btn btn-outline-secondary" type="submit" onclick="registerSubmit = true;" data-loc="login_registerButton"></button>
+                        </div>
+                    </form>
+                    <div class="login-foot"><span class="status-dot"></span>Local SpaceNinja server</div>
+                </div>
             </div>
             <div data-route="/webui/inventory" data-title-tag="navbar_inventory">
                 <p class="mb-3 inventory-update-note"></p>

@@ -73,6 +73,7 @@ function openWebSocket() {
             $("#email").val("");
             $("#password").val("");
             $(".displayname").text(data.DisplayName);
+            syncUserAvatar(data.DisplayName);
             window.accountId = data.id;
             window.authz = "accountId=";
             let possessing = localStorage.getItem("possessing");
@@ -337,6 +338,7 @@ function renameAccount(taken_name) {
             fetch("/custom/renameAccount?" + window.authz + "&newname=" + encodeURIComponent(newname)).then(res => {
                 if (res.status == 200) {
                     $(".displayname").text(newname);
+                    syncUserAvatar(newname);
                     updateLocElements();
                     toast(loc("code_succRelog"));
                 } else if (res.status == 409) {
@@ -462,12 +464,32 @@ function changeAccountEmail() {
     promptAndSend();
 }
 
+function syncUserAvatar(name) {
+    const initial = (name || "U").trim().charAt(0).toUpperCase() || "U";
+    const main = document.getElementById("user-avatar-initial");
+    const menu = document.getElementById("user-avatar-menu-initial");
+    if (main) main.textContent = initial;
+    if (menu) menu.textContent = initial;
+}
+
+function filterNavigation(value) {
+    const query = String(value || "").trim().toLowerCase();
+    document.querySelectorAll("#sidebar .nav-item").forEach(item => {
+        const link = item.querySelector(".nav-link");
+        const text = (link?.textContent || "").trim().toLowerCase();
+        item.style.display = !query || text.includes(query) ? "" : "none";
+    });
+}
+
 function updateTitle() {
     const route = single.getCurrentRoute();
     if (route) {
         const tag = route.elm.getAttribute("data-title-tag");
         if (tag) {
-            document.querySelector("title").textContent = loc(tag) + " | OpenWF WebUI";
+            const routeTitle = loc(tag);
+            document.querySelector("title").textContent = routeTitle + " | OpenWF WebUI";
+            const heading = document.querySelector("#page-heading");
+            if (heading) heading.textContent = routeTitle;
         }
     }
 }

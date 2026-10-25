@@ -32,6 +32,10 @@
   "autoCreateAccount": true,
   "skipTutorial": false,
   "fallbackBuildLabel": "2013.01.04.10.41/",
+  "clientCompatibility": {
+    "maxBuildLabel": "2026.10.15.23.59",
+    "logDetectedU44Build": true
+  },
   "fullyStockedVendors": false,
   "skipClanKeyCrafting": false,
   "webui": {

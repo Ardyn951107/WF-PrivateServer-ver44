@@ -64,6 +64,12 @@ export interface IConfig {
     administratorNames?: string[];
     autoCreateAccount?: boolean;
     fallbackBuildLabel?: string;
+    clientCompatibility?: {
+        /** Maximum accepted client build label. Set null to disable the ceiling. */
+        maxBuildLabel?: string | null;
+        /** Log the first U44-family build label observed after startup. */
+        logDetectedU44Build?: boolean;
+    };
     skipTutorial?: boolean;
     fullyStockedVendors?: boolean;
     skipClanKeyCrafting?: boolean;

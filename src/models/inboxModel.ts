@@ -75,6 +75,8 @@ messageSchema.set("toJSON", {
 });
 
 messageSchema.index({ ownerId: 1 });
+// inventory.php asks for the newest message per owner (filter ownerId, sort date desc, limit 1).
+messageSchema.index({ ownerId: 1, date: -1 });
 messageSchema.index({ endDate: 1 }, { expireAfterSeconds: 0 });
 
 export const Inbox = model<IMessageDatabase>("Inbox", messageSchema, "inbox");
