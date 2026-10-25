@@ -49,7 +49,7 @@
     "@types/morgan": "^1.9.9",
     "@types/websocket": "^1.0.10",
     "@types/ws": "^8.18.1",
-    "@typescript/native-preview": "^7.0.0-dev.20260308.1",
+    "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "logform": "^2.7.0",
     "ncp": "^2.0.0"
   },
