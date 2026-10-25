@@ -1,8 +1,0 @@
-**/.dockerignore
-**/.git
-Dockerfile*
-.*
-docker-data/
-node_modules/
-static/data/
-logs/
