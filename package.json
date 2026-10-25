@@ -37,7 +37,7 @@
     "mongodb-memory-server-core": "^11.1.0",
     "mongoose": "^9.6.2",
     "morgan": "^1.10.0",
-    "undici": "^7.10.0",
+    "undici": "^8.12.3",
     "warframe-public-export-plus": "^0.6.12",
     "warframe-riven-info": "^0.1.2",
     "winston": "^3.17.0",
