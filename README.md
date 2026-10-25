@@ -110,4 +110,4 @@ Set `worldState.nightwaveOverride` to one of these values:
 
 ## Credits
 
-This project builds on the [OpenWF SpaceNinjaServer preservation project](https://about.openwf.io/). Visit the [OpenWF website](https://about.openwf.io/) or join the [OpenWF Discord](https://discord.gg/PNNZ3asUuY) for upstream project information.
+This custom Warframe 44.1.1 server is maintained by [Ardyn951107](https://github.com/Ardyn951107) and builds on the [OpenWF SpaceNinjaServer preservation project](https://about.openwf.io/). Thanks to the [SpaceNinjaServer contributors](https://github.com/OpenWF/SpaceNinjaServer/graphs/contributors) for their work. Visit the [OpenWF website](https://about.openwf.io/) or join the [OpenWF Discord](https://discord.gg/PNNZ3asUuY) for upstream project information.
